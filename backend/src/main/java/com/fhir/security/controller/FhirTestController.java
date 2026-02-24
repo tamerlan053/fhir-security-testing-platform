@@ -1,7 +1,12 @@
 package com.fhir.security.controller;
 
+import com.fhir.security.dto.PatientDto;
+import com.fhir.security.mapper.PatientMapper;
 import com.fhir.security.service.FhirClientService;
+import org.hl7.fhir.r4.model.Patient;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/fhir")
@@ -22,5 +27,13 @@ public class FhirTestController {
     @GetMapping("/test")
     public boolean test() {
         return fhirClientService.testConnection();
+    }
+
+    @GetMapping("/Patient")
+    public List<PatientDto> getPatients(@RequestParam(defaultValue = "10") int count) {
+        List<Patient> patients = fhirClientService.fetchPatients(count);
+        return patients.stream()
+                .map(PatientMapper::toDto)
+                .toList();
     }
 }
