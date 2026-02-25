@@ -5,7 +5,6 @@ import ca.uhn.fhir.rest.api.MethodOutcome;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import com.fhir.security.dto.CreatePatientResult;
-import com.fhir.security.dto.ObservationDto;
 import org.hl7.fhir.instance.model.api.IBaseOperationOutcome;
 import org.hl7.fhir.r4.model.*;
 import org.slf4j.Logger;
@@ -14,9 +13,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.stream.Collectors;
-
-import static java.lang.System.err;
-import static java.lang.System.out;
 
 @Service
 public class FhirClientService {
@@ -45,7 +41,11 @@ public class FhirClientService {
         try {
             client.capabilities().ofType(CapabilityStatement.class).execute();
             return true;
+        } catch (BaseServerResponseException e) {
+            log.warn("Connection test failed: statusCode={}, message={}", e.getStatusCode(), e.getMessage());
+            return false;
         } catch (Exception e) {
+            log.warn("Connection test failed: {}", e.getMessage());
             return false;
         }
     }
@@ -54,21 +54,29 @@ public class FhirClientService {
         if (client == null) {
             throw new IllegalStateException("Not connected. Call connectToServer(String) first.");
         }
-        Bundle bundle = client.search()
-                .forResource(Patient.class)
-                .count(count)
-                .returnBundle(Bundle.class)
-                .execute();
-        List<Patient> patients = bundle.getEntry().stream()
-                .map(Bundle.BundleEntryComponent::getResource)
-                .filter(r -> r instanceof Patient)
-                .map(r -> (Patient) r)
-                .collect(Collectors.toList());
+        try {
+            Bundle bundle = client.search()
+                    .forResource(Patient.class)
+                    .count(count)
+                    .returnBundle(Bundle.class)
+                    .execute();
+            List<Patient> patients = bundle.getEntry().stream()
+                    .map(Bundle.BundleEntryComponent::getResource)
+                    .filter(r -> r instanceof Patient)
+                    .map(r -> (Patient) r)
+                    .collect(Collectors.toList());
 
-        log.info("Fetched {} patients from FHIR server", patients.size());
-        patients.forEach(p -> log.debug("Patient: id={}, name={}", p.getId(), p.getName().isEmpty() ? "N/A" : p.getNameFirstRep().getNameAsSingleString()));
+            log.info("Fetched {} patients from FHIR server", patients.size());
+            patients.forEach(p -> log.debug("Patient: id={}, name={}", p.getId(), p.getName().isEmpty() ? "N/A" : p.getNameFirstRep().getNameAsSingleString()));
 
-        return patients;
+            return patients;
+        } catch (BaseServerResponseException e) {
+            log.warn("Failed to fetch patients: statusCode={}, message={}", e.getStatusCode(), e.getMessage());
+            return List.of();
+        } catch (Exception e) {
+            log.error("Failed to fetch patients: {}", e.getMessage(), e);
+            return List.of();
+        }
     }
 
     public List<Observation> fetchObservations(int count) {
@@ -82,8 +90,11 @@ public class FhirClientService {
                     .returnBundle(Bundle.class)
                     .execute();
             return extractObservations(bundle);
+        } catch (BaseServerResponseException e) {
+            log.warn("Failed to fetch observations: statusCode={}, message={}", e.getStatusCode(), e.getMessage());
+            return List.of();
         } catch (Exception e) {
-            log.warn("Failed to fetch obsercations {}", e.getMessage());
+            log.warn("Failed to fetch observations: {}", e.getMessage());
             return List.of();
         }
     }
@@ -105,8 +116,11 @@ public class FhirClientService {
                     .returnBundle(Bundle.class)
                     .execute();
             return extractObservations(bundle);
+        } catch (BaseServerResponseException e) {
+            log.warn("Failed to fetch observations for patient {}: statusCode={}, message={}", patientId, e.getStatusCode(), e.getMessage());
+            return List.of();
         } catch (Exception e) {
-            log.warn("Failed to fetch obsercations for patient {}", patientId, e.getMessage());
+            log.warn("Failed to fetch observations for patient {}: {}", patientId, e.getMessage());
             return List.of();
         }
     }
