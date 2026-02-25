@@ -1,8 +1,11 @@
 package com.fhir.security.controller;
 
+import com.fhir.security.dto.ObservationDto;
 import com.fhir.security.dto.PatientDto;
+import com.fhir.security.mapper.ObservationMapper;
 import com.fhir.security.mapper.PatientMapper;
 import com.fhir.security.service.FhirClientService;
+import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Patient;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,6 +37,24 @@ public class FhirTestController {
         List<Patient> patients = fhirClientService.fetchPatients(count);
         return patients.stream()
                 .map(PatientMapper::toDto)
+                .toList();
+    }
+
+    @GetMapping("/Observation")
+    public List<ObservationDto> getObservations(@RequestParam(defaultValue = "10") int count) {
+        List<Observation> observations = fhirClientService.fetchObservations(count);
+        return observations.stream()
+                .map(ObservationMapper::toDto)
+                .toList();
+    }
+
+    @GetMapping(value = "/Observation", params = "patient")
+    public List<ObservationDto> getObservationsByPatient(
+            @RequestParam String patient,
+            @RequestParam(defaultValue = "50") int count) {
+        List<Observation> observations = fhirClientService.fetchObservationsByPatientId(patient, count);
+        return observations.stream()
+                .map(ObservationMapper::toDto)
                 .toList();
     }
 }
