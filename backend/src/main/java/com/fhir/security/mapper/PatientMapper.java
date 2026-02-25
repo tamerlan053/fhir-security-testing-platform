@@ -1,7 +1,14 @@
 package com.fhir.security.mapper;
 
+import com.fhir.security.dto.CreatePatientRequest;
 import com.fhir.security.dto.PatientDto;
+import org.hl7.fhir.r4.model.DateType;
+import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.Patient;
+import org.hl7.fhir.r4.model.StringType;
+
+import java.util.Enumeration;
+import java.util.List;
 
 public class PatientMapper {
 
@@ -21,5 +28,25 @@ public class PatientMapper {
                 birthDate,
                 gender
         );
+    }
+
+    public static Patient formCreateRequest(CreatePatientRequest request) {
+        Patient patient = new Patient();
+        patient.addName()
+                .setGiven(request.givenName() != null ? List.of(new StringType(request.givenName())) : List.of(new StringType("Unknown")))
+                .setFamily(request.familyName() != null ? request.familyName() : "Unknown");
+        if (request.birthDate() != null && !request.birthDate().isBlank()) {
+            patient.setBirthDateElement(new DateType(request.birthDate()));
+        }
+        if (request.gender() != null && !request.gender().isBlank()) {
+            switch (request.gender().toLowerCase()) {
+                case "male" -> patient.setGender(Enumerations.AdministrativeGender.MALE);
+                case "female" -> patient.setGender(Enumerations.AdministrativeGender.FEMALE);
+                case "other" -> patient.setGender(Enumerations.AdministrativeGender.OTHER);
+                case "unknown" -> patient.setGender(Enumerations.AdministrativeGender.UNKNOWN);
+                default -> {}
+            }
+        }
+        return patient;
     }
 }

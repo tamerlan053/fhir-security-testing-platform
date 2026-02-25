@@ -1,18 +1,22 @@
 package com.fhir.security.service;
 
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.rest.api.MethodOutcome;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
+import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
+import com.fhir.security.dto.CreatePatientResult;
 import com.fhir.security.dto.ObservationDto;
-import org.hl7.fhir.r4.model.Bundle;
-import org.hl7.fhir.r4.model.CapabilityStatement;
-import org.hl7.fhir.r4.model.Observation;
-import org.hl7.fhir.r4.model.Patient;
+import org.hl7.fhir.instance.model.api.IBaseOperationOutcome;
+import org.hl7.fhir.r4.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static java.lang.System.err;
+import static java.lang.System.out;
 
 @Service
 public class FhirClientService {
@@ -116,5 +120,56 @@ public class FhirClientService {
                 .filter(r -> r instanceof Observation)
                 .map(r -> (Observation) r)
                 .collect(Collectors.toList());
+    }
+
+    public CreatePatientResult createPatient(Patient patient) {
+        if (client == null) {
+            throw new IllegalStateException("Not connected. Call connectToServer(String) first.");
+        }
+        try {
+            MethodOutcome outcome = client.create().resource(patient).execute();
+
+            boolean created = Boolean.TRUE.equals(outcome.getCreated());
+            int statusCode = created ? 201 : 200;
+            String id = outcome.getId() != null ? outcome.getId().getIdPart() : null;
+
+            log.info("Patient create response: statusCode={}, created={}, id={}", statusCode, created, id);
+
+            return new CreatePatientResult(true, id, statusCode, null, List.of());
+        } catch (BaseServerResponseException e) {
+            int statusCode = e.getStatusCode();
+            String message = e.getMessage();
+            List<String> validationErrors = extractValidationErrors(e.getOperationOutcome());
+
+            log.warn("Patient create failed: statusCode={}, message={}", statusCode, message);
+            validationErrors.forEach(err -> log.warn("Validation error: {}", err));
+
+            return new CreatePatientResult(false, null, statusCode, message, validationErrors);
+        } catch (Exception e) {
+            log.error("Patient create failed with unexpected error", e);
+            return new CreatePatientResult(false, null, 500, e.getMessage(), List.of());
+        }
+    }
+
+    private List<String> extractValidationErrors(IBaseOperationOutcome outcome) {
+        if (outcome == null) {
+            return List.of();
+        }
+        if (!(outcome instanceof OperationOutcome oo)) {
+            return List.of();
+        }
+        if (!oo.hasIssue()) {
+            return List.of();
+        }
+
+        return oo.getIssue().stream()
+                .map(issue -> {
+                    String severity = issue.getSeverity() != null ? issue.getSeverity().getDisplay() : "?";
+                    String code = issue.getCode() != null ? issue.getCode().getDisplay() : "?";
+                    String diag = issue.getDiagnostics();
+                    String details = issue.hasDetails() && issue.getDetails().hasText() ? issue.getDetails().getText() : null;
+                    return String.format("[%s] %s: %s", severity, code, diag != null ? diag : (details != null ? details : ""));
+                })
+                .toList();
     }
 }

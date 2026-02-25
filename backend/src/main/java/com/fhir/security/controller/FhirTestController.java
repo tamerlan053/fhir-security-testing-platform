@@ -1,5 +1,7 @@
 package com.fhir.security.controller;
 
+import com.fhir.security.dto.CreatePatientRequest;
+import com.fhir.security.dto.CreatePatientResult;
 import com.fhir.security.dto.ObservationDto;
 import com.fhir.security.dto.PatientDto;
 import com.fhir.security.mapper.ObservationMapper;
@@ -7,6 +9,7 @@ import com.fhir.security.mapper.PatientMapper;
 import com.fhir.security.service.FhirClientService;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Patient;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -56,5 +59,12 @@ public class FhirTestController {
         return observations.stream()
                 .map(ObservationMapper::toDto)
                 .toList();
+    }
+
+    @PostMapping("/Patient")
+    public ResponseEntity<CreatePatientResult> createPatient(@RequestBody CreatePatientRequest request) {
+        Patient patient = PatientMapper.formCreateRequest(request);
+        CreatePatientResult result = fhirClientService.createPatient(patient);
+        return ResponseEntity.status(result.statusCode()).body(result);
     }
 }
