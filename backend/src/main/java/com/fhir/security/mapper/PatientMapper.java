@@ -7,7 +7,6 @@ import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.StringType;
 
-import java.util.Enumeration;
 import java.util.List;
 
 public class PatientMapper {
@@ -30,7 +29,7 @@ public class PatientMapper {
         );
     }
 
-    public static Patient formCreateRequest(CreatePatientRequest request) {
+    public static Patient fromCreateRequest(CreatePatientRequest request) {
         Patient patient = new Patient();
         patient.addName()
                 .setGiven(request.givenName() != null ? List.of(new StringType(request.givenName())) : List.of(new StringType("Unknown")))

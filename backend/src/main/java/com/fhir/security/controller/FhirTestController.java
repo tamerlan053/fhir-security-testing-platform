@@ -10,6 +10,8 @@ import com.fhir.security.service.FhirClientService;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Patient;
 import org.springframework.http.ResponseEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,6 +19,8 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/fhir")
 public class FhirTestController {
+
+    private static final Logger log = LoggerFactory.getLogger(FhirTestController.class);
 
     private final FhirClientService fhirClientService;
 
@@ -26,13 +30,16 @@ public class FhirTestController {
 
     @PostMapping("/connect")
     public String connect(@RequestParam String baseUrl) {
+        log.info("Connecting to FHIR server: {}", baseUrl);
         fhirClientService.connectToServer(baseUrl);
         return "Connected to " + baseUrl;
     }
 
     @GetMapping("/test")
     public boolean test() {
-        return fhirClientService.testConnection();
+        boolean connected = fhirClientService.testConnection();
+        log.debug("Connection test result: {}", connected);
+        return connected;
     }
 
     @GetMapping("/Patient")
@@ -63,8 +70,10 @@ public class FhirTestController {
 
     @PostMapping("/Patient")
     public ResponseEntity<CreatePatientResult> createPatient(@RequestBody CreatePatientRequest request) {
-        Patient patient = PatientMapper.formCreateRequest(request);
+        log.info("Creating patient: {} {}", request.givenName(), request.familyName());
+        Patient patient = PatientMapper.fromCreateRequest(request);
         CreatePatientResult result = fhirClientService.createPatient(patient);
+        log.debug("Create patient result: success={}, id={}", result.success(), result.patientId());
         return ResponseEntity.status(result.statusCode()).body(result);
     }
 }

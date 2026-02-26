@@ -6,10 +6,10 @@ import org.hl7.fhir.r4.model.*;
 
 public class ObservationMapper {
     public static ObservationDto toDto(Observation obs) {
-        String patiendId = null;
+        String patientId = null;
         if (obs.hasSubject() && obs.getSubject().hasReference()) {
             String ref = obs.getSubject().getReference();
-            patiendId = ref.contains("/") ? ref.substring(ref.lastIndexOf("/") + 1) : ref;
+            patientId = ref.contains("/") ? ref.substring(ref.lastIndexOf("/") + 1) : ref;
         }
 
         String code = null;
@@ -38,7 +38,7 @@ public class ObservationMapper {
 
         return new ObservationDto(
                 obs.getIdElement().getIdPart(),
-                patiendId,
+                patientId,
                 code,
                 display,
                 value,
