@@ -5,6 +5,7 @@ import ca.uhn.fhir.rest.api.MethodOutcome;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import com.fhir.security.dto.CreatePatientResult;
+import com.fhir.security.exception.FhirServerException;
 import org.hl7.fhir.instance.model.api.IBaseOperationOutcome;
 import org.hl7.fhir.r4.model.*;
 import org.slf4j.Logger;
@@ -72,10 +73,10 @@ public class FhirClientService {
             return patients;
         } catch (BaseServerResponseException e) {
             log.warn("Failed to fetch patients: statusCode={}, message={}", e.getStatusCode(), e.getMessage());
-            return List.of();
+            throw new FhirServerException("FHIR server error or unreachable", e);
         } catch (Exception e) {
             log.error("Failed to fetch patients: {}", e.getMessage(), e);
-            return List.of();
+            throw new FhirServerException("FHIR server error or unreachable", e);
         }
     }
 
@@ -92,10 +93,10 @@ public class FhirClientService {
             return extractObservations(bundle);
         } catch (BaseServerResponseException e) {
             log.warn("Failed to fetch observations: statusCode={}, message={}", e.getStatusCode(), e.getMessage());
-            return List.of();
+            throw new FhirServerException("FHIR server error or unreachable", e);
         } catch (Exception e) {
             log.warn("Failed to fetch observations: {}", e.getMessage());
-            return List.of();
+            throw new FhirServerException("FHIR server error or unreachable", e);
         }
     }
 
@@ -118,10 +119,10 @@ public class FhirClientService {
             return extractObservations(bundle);
         } catch (BaseServerResponseException e) {
             log.warn("Failed to fetch observations for patient {}: statusCode={}, message={}", patientId, e.getStatusCode(), e.getMessage());
-            return List.of();
+            throw new FhirServerException("FHIR server error or unreachable", e);
         } catch (Exception e) {
             log.warn("Failed to fetch observations for patient {}: {}", patientId, e.getMessage());
-            return List.of();
+            throw new FhirServerException("FHIR server error or unreachable", e);
         }
     }
 

@@ -261,7 +261,26 @@ This project is designed to be:
 
 ## Getting Started
 
-*Setup instructions will be added as the project progresses.*
+### Prerequisites
+
+- **Java 21**
+- **Maven 3.6+** (or use the included Maven wrapper)
+
+### Run the Backend
+
+```bash
+cd backend
+./mvnw spring-boot:run
+```
+
+On Windows:
+
+```bash
+cd backend
+mvnw.cmd spring-boot:run
+```
+
+The API runs at **http://localhost:8080**. See [backend/README.md](backend/README.md) for API endpoints and configuration.
 
 ---
 

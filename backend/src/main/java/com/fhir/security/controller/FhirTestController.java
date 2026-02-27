@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
 import java.util.List;
 
 @RestController
@@ -69,7 +70,7 @@ public class FhirTestController {
     }
 
     @PostMapping("/Patient")
-    public ResponseEntity<CreatePatientResult> createPatient(@RequestBody CreatePatientRequest request) {
+    public ResponseEntity<CreatePatientResult> createPatient(@Valid @RequestBody CreatePatientRequest request) {
         log.info("Creating patient: {} {}", request.givenName(), request.familyName());
         Patient patient = PatientMapper.fromCreateRequest(request);
         CreatePatientResult result = fhirClientService.createPatient(patient);
