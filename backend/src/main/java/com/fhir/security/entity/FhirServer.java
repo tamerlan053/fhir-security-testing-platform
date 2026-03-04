@@ -2,6 +2,9 @@ package com.fhir.security.entity;
 
 import jakarta.persistence.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "fhir_server")
 public class FhirServer {
@@ -13,6 +16,9 @@ public class FhirServer {
     private String name;
     private String baseUrl;
     private String authenticationType;
+
+    @OneToMany(mappedBy = "server", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TestRun> testRuns = new ArrayList<>();
 
     public FhirServer() {
     }
