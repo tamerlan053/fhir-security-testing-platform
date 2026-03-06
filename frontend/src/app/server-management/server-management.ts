@@ -14,7 +14,7 @@ import { FhirServer, AddServerRequest } from '../models/server.model';
 
       <form (ngSubmit)="onAdd()" class="form">
         <input [(ngModel)]="form.name" name="name" placeholder="Server name" required />
-        <input [(ngModel)]="form.baseUrl" name="baseUrl" placeholder="Base URL (e.g. <http://hapi.fhir.org/baseR4>)" required />
+        <input [(ngModel)]="form.baseUrl" name="baseUrl" placeholder="Base URL (e.g. http://hapi.fhir.org/baseR4)" required />
         <button type="submit">Add Server</button>
       </form>
 
@@ -73,7 +73,7 @@ export class ServerManagementComponent implements OnInit {
   loadServers(): void {
     this.serverService.getServers().subscribe({
       next: (data) => this.servers = data,
-      error: (err) => this.errorMessage = 'Failed to load servers'
+      error: (err) => this.errorMessage = err.error?.error || err.error?.message || 'Failed to load servers'
     });
   }
 
@@ -86,7 +86,7 @@ export class ServerManagementComponent implements OnInit {
         this.form = { name: '', baseUrl: '', authenticationType: '' };
         this.loadServers();
       },
-      error: (err) => this.errorMessage = err.error?.message || 'Failed to add server'
+      error: (err) => this.errorMessage = err.error?.error || err.error?.message || 'Failed to add server'
     });
   }
 
@@ -95,7 +95,7 @@ export class ServerManagementComponent implements OnInit {
     this.errorMessage = '';
     this.serverService.deleteServer(id).subscribe({
       next: () => this.loadServers(),
-      error: (err) => this.errorMessage = err.error?.message || 'Failed to delete'
+      error: (err) => this.errorMessage = err.error?.error || err.error?.message || 'Failed to delete'
     });
   }
 }
