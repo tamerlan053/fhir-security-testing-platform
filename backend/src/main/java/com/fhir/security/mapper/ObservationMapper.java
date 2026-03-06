@@ -1,6 +1,6 @@
 package com.fhir.security.mapper;
 
-import com.fhir.security.dto.ObservationDto;
+import com.fhir.security.dto.response.ObservationDto;
 import org.hl7.fhir.r4.model.*;
 
 

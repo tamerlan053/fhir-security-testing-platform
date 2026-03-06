@@ -1,8 +1,8 @@
-package com.fhir.security.dto;
+package com.fhir.security.dto.response;
 
 import java.util.List;
 
-public record CreatePatientResult (
+public record CreatePatientResult(
         boolean success,
         String patientId,
         int statusCode,

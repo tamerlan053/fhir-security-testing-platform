@@ -1,6 +1,6 @@
 package com.fhir.security.mapper;
 
-import com.fhir.security.dto.FhirServerResponse;
+import com.fhir.security.dto.response.FhirServerResponse;
 import com.fhir.security.entity.FhirServer;
 
 public class FhirServerMapper {

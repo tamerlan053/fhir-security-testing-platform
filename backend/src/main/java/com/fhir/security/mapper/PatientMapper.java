@@ -1,7 +1,7 @@
 package com.fhir.security.mapper;
 
-import com.fhir.security.dto.CreatePatientRequest;
-import com.fhir.security.dto.PatientDto;
+import com.fhir.security.dto.request.CreatePatientRequest;
+import com.fhir.security.dto.response.PatientDto;
 import org.hl7.fhir.r4.model.DateType;
 import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.Patient;

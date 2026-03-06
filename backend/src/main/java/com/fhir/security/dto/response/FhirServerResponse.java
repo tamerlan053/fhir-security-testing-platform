@@ -1,4 +1,4 @@
-package com.fhir.security.dto;
+package com.fhir.security.dto.response;
 
 public record FhirServerResponse(
         Long id,

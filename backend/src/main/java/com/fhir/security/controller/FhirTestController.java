@@ -1,9 +1,9 @@
 package com.fhir.security.controller;
 
-import com.fhir.security.dto.CreatePatientRequest;
-import com.fhir.security.dto.CreatePatientResult;
-import com.fhir.security.dto.ObservationDto;
-import com.fhir.security.dto.PatientDto;
+import com.fhir.security.dto.request.CreatePatientRequest;
+import com.fhir.security.dto.response.CreatePatientResult;
+import com.fhir.security.dto.response.ObservationDto;
+import com.fhir.security.dto.response.PatientDto;
 import com.fhir.security.mapper.ObservationMapper;
 import com.fhir.security.mapper.PatientMapper;
 import com.fhir.security.service.FhirClientService;

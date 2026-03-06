@@ -1,7 +1,7 @@
 package com.fhir.security.controller;
 
-import com.fhir.security.dto.AddServerRequest;
-import com.fhir.security.dto.FhirServerResponse;
+import com.fhir.security.dto.request.AddServerRequest;
+import com.fhir.security.dto.response.FhirServerResponse;
 import com.fhir.security.entity.FhirServer;
 import com.fhir.security.mapper.FhirServerMapper;
 import com.fhir.security.service.FhirServerService;
