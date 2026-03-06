@@ -27,9 +27,14 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiError> handleIllegalArgument(IllegalArgumentException e) {
+        if (e.getMessage() != null && e.getMessage().contains("Server not found")) {
+            return ResponseEntity
+                    .status(HttpStatus.NOT_FOUND)
+                    .body(ApiError.of(e.getMessage(), "SERVER_NOT_FOUND"));
+        }
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(ApiError.of(e.getMessage(), "INVALID_BASE_URL"));
+                .body(ApiError.of(e.getMessage(), "INVALID_ARGUMENT"));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
