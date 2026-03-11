@@ -21,6 +21,9 @@ public class TestResult {
     private int statusCode;
     private boolean vulnerable;
 
+    @Column(columnDefinition = "TEXT")
+    private String responseBody;
+
     public TestResult() {}
 
     public TestResult(TestRun testRun, AttackScenario scenario, int statusCode, boolean vulnerable) {
@@ -68,5 +71,13 @@ public class TestResult {
 
     public void setVulnerable(boolean vulnerable) {
         this.vulnerable = vulnerable;
+    }
+
+    public String getResponseBody() {
+        return responseBody;
+    }
+
+    public void setResponseBody(String responseBody) {
+        this.responseBody = responseBody;
     }
 }
