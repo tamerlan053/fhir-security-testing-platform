@@ -16,4 +16,8 @@ public class AttackRegistry {
     public List<AttackScenario> getScenarios() {
         return scenarios;
     }
+
+    public List<AttackScenario> getAll() {
+        return scenarios;
+    }
 }
