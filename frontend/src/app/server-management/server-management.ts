@@ -1,16 +1,20 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { ServerService } from '../services/server.service';
 import { FhirServer, AddServerRequest } from '../models/server.model';
 
 @Component({
   selector: 'app-server-management',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   template: `
     <div class="container">
       <h2>FHIR Server Management</h2>
+      <div class="nav">
+        <a routerLink="/attacks">Run Security Tests →</a>
+      </div>
 
       <form (ngSubmit)="onAdd()" class="form">
         <input [(ngModel)]="form.name" name="name" placeholder="Server name" required />
@@ -36,11 +40,15 @@ import { FhirServer, AddServerRequest } from '../models/server.model';
             <td>{{ server.baseUrl }}</td>
             <td>{{ server.authenticationType || '-' }}</td>
             <td>
+              <a routerLink="/attacks" [queryParams]="{serverId: server.id}" class="btn-link">Run Test</a>
               <button (click)="onDelete(server.id)">Delete</button>
             </td>
           </tr>
-          <tr *ngIf="servers.length === 0">
-            <td colspan="4">No servers yet. Add one above.</td>
+          <tr *ngIf="!loading && servers.length === 0">
+            <td colspan="5">No servers yet. Add one above.</td>
+          </tr>
+          <tr *ngIf="loading">
+            <td colspan="5" class="loading">Loading servers...</td>
           </tr>
         </tbody>
       </table>
@@ -48,6 +56,9 @@ import { FhirServer, AddServerRequest } from '../models/server.model';
   `,
   styles: [`
     .container { padding: 20px; max-width: 800px; }
+    .nav { margin-bottom: 16px; }
+    .nav a { color: #1976d2; text-decoration: none; }
+    .nav a:hover { text-decoration: underline; }
     .form { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
     .form input { flex: 1; min-width: 200px; padding: 8px; }
     .form button { padding: 8px 16px; }
@@ -56,6 +67,8 @@ import { FhirServer, AddServerRequest } from '../models/server.model';
     th { background: #f4f4f4; }
     .error { color: red; }
     .success { color: green; }
+    .loading { color: #666; font-style: italic; }
+    .btn-link { color: #1976d2; margin-right: 8px; }
   `]
 })
 export class ServerManagementComponent implements OnInit {
@@ -63,17 +76,31 @@ export class ServerManagementComponent implements OnInit {
   form: AddServerRequest = { name: '', baseUrl: '', authenticationType: '' };
   errorMessage = '';
   successMessage = '';
+  loading = false;
 
-  constructor(private serverService: ServerService) {}
+  constructor(
+    private serverService: ServerService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit(): void {
     this.loadServers();
   }
 
   loadServers(): void {
+    this.loading = true;
+    this.errorMessage = '';
     this.serverService.getServers().subscribe({
-      next: (data) => this.servers = data,
-      error: (err) => this.errorMessage = err.error?.error || err.error?.message || 'Failed to load servers'
+      next: (data) => {
+        this.servers = data;
+        this.loading = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.errorMessage = this.formatError(err);
+        this.loading = false;
+        this.cdr.detectChanges();
+      }
     });
   }
 
@@ -86,7 +113,10 @@ export class ServerManagementComponent implements OnInit {
         this.form = { name: '', baseUrl: '', authenticationType: '' };
         this.loadServers();
       },
-      error: (err) => this.errorMessage = err.error?.error || err.error?.message || 'Failed to add server'
+      error: (err) => {
+        this.errorMessage = this.formatError(err);
+        this.cdr.detectChanges();
+      }
     });
   }
 
@@ -95,7 +125,16 @@ export class ServerManagementComponent implements OnInit {
     this.errorMessage = '';
     this.serverService.deleteServer(id).subscribe({
       next: () => this.loadServers(),
-      error: (err) => this.errorMessage = err.error?.error || err.error?.message || 'Failed to delete'
+      error: (err) => {
+        this.errorMessage = this.formatError(err);
+        this.cdr.detectChanges();
+      }
     });
+  }
+
+  private formatError(err: { error?: { error?: string; errors?: string[]; message?: string } }): string {
+    const e = err?.error;
+    if (e?.errors?.length) return e.errors.join('; ');
+    return e?.error || e?.message || 'Request failed';
   }
 }

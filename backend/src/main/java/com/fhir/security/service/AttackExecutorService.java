@@ -3,7 +3,6 @@ package com.fhir.security.service;
 import com.fhir.security.attack.AttackRegistry;
 import com.fhir.security.attack.AttackResult;
 import com.fhir.security.attack.AttackScenario;
-import com.fhir.security.dto.TestResult;
 import com.fhir.security.entity.FhirServer;
 import com.fhir.security.entity.TestRun;
 import com.fhir.security.repository.AttackScenarioRepository;
@@ -15,7 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Service
 public class AttackExecutorService {
@@ -35,11 +33,6 @@ public class AttackExecutorService {
         this.testRunRepository = testRunRepository;
         this.testResultRepository = testResultRepository;
         this.attackScenarioRepository = attackScenarioRepository;
-    }
-
-    public TestResult execute(AttackScenario scenario, String baseUrl) {
-        log.debug("Attack execution requested for scenario against {}", baseUrl);
-        throw new UnsupportedOperationException("Attack execution not yet implemented");
     }
 
     @Transactional
