@@ -2,8 +2,10 @@ package com.fhir.security.service;
 
 import com.fhir.security.attack.AttackRegistry;
 import com.fhir.security.attack.AttackResult;
-import com.fhir.security.attack.AttackScenario;
+import com.fhir.security.attack.ExecutableAttack;
+import com.fhir.security.entity.AttackScenario;
 import com.fhir.security.entity.FhirServer;
+import com.fhir.security.entity.TestResult;
 import com.fhir.security.entity.TestRun;
 import com.fhir.security.repository.AttackScenarioRepository;
 import com.fhir.security.repository.TestResultRepository;
@@ -40,20 +42,20 @@ public class AttackExecutorService {
         TestRun run = new TestRun(server, LocalDateTime.now());
         testRunRepository.save(run);
 
-        for (AttackScenario scenario : registry.getScenarios()) {
+        for (ExecutableAttack scenario : registry.getScenarios()) {
             AttackResult result = scenario.execute(server);
 
-            com.fhir.security.entity.AttackScenario entityScenario = attackScenarioRepository
+            AttackScenario entityScenario = attackScenarioRepository
                     .findByName(scenario.getName())
                     .orElseGet(() -> attackScenarioRepository.save(
-                            new com.fhir.security.entity.AttackScenario(
+                            new AttackScenario(
                                     scenario.getName(),
                                     scenario.getDescription(),
                                     "MEDIUM"
                             )
                     ));
 
-            com.fhir.security.entity.TestResult tr = new com.fhir.security.entity.TestResult();
+            TestResult tr = new TestResult();
             tr.setTestRun(run);
             tr.setScenario(entityScenario);
             tr.setStatusCode(result.statusCode());

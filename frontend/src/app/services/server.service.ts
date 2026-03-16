@@ -1,17 +1,16 @@
 import { HttpClient } from "@angular/common/http";
 import { Injectable } from "@angular/core";
 import { Observable } from "rxjs";
+import { environment } from "../../environments/environment";
 import { AddServerRequest, FhirServer } from "../models/server.model";
 
 @Injectable({
     providedIn: 'root'
 })
 export class ServerService {
-    private apiUrl = 'http://localhost:8080/api/servers';
+    private readonly apiUrl = `${environment.apiBaseUrl}/api/servers`;
 
-    constructor(private http: HttpClient) {
-
-    }
+    constructor(private http: HttpClient) {}
 
     getServers(): Observable<FhirServer[]> {
         return this.http.get<FhirServer[]>(this.apiUrl);

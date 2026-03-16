@@ -2,7 +2,7 @@ package com.fhir.security.attack;
 
 import com.fhir.security.entity.FhirServer;
 
-public interface AttackScenario {
+public interface ExecutableAttack {
 
     String getName();
 

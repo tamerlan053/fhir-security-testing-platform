@@ -1,5 +1,7 @@
 package com.fhir.security.controller;
 
+import com.fhir.security.dto.response.RunResultResponse;
+import com.fhir.security.dto.response.TestRunSummaryResponse;
 import com.fhir.security.entity.TestRun;
 import com.fhir.security.repository.TestRunRepository;
 import com.fhir.security.service.AttackExecutorService;
@@ -31,24 +33,21 @@ public class AttackController {
     }
 
     @PostMapping("/run/{serverId}")
-    public ResponseEntity<RunResult> runAttacks(@PathVariable Long serverId) {
+    public ResponseEntity<RunResultResponse> runAttacks(@PathVariable Long serverId) {
         log.info("POST /api/attacks/run/{} - starting attack run", serverId);
         var server = fhirServerService.getServerById(serverId);
         TestRun run = attackExecutorService.executeAll(server);
-        return ResponseEntity.ok(new RunResult(run.getId(), run.getStartedAt().toString()));
+        return ResponseEntity.ok(new RunResultResponse(run.getId(), run.getStartedAt().toString()));
     }
 
     @GetMapping("/runs/{serverId}")
     @Transactional(readOnly = true)
-    public ResponseEntity<List<TestRunSummary>> getRunsForServer(@PathVariable Long serverId) {
+    public ResponseEntity<List<TestRunSummaryResponse>> getRunsForServer(@PathVariable Long serverId) {
         log.info("GET /api/attacks/runs/{} - listing test runs", serverId);
         List<TestRun> runs = testRunRepository.findByServerIdOrderByStartedAtDesc(serverId);
-        List<TestRunSummary> summaries = runs.stream()
-                .map(r -> new TestRunSummary(r.getId(), r.getStartedAt().toString()))
+        List<TestRunSummaryResponse> summaries = runs.stream()
+                .map(r -> new TestRunSummaryResponse(r.getId(), r.getStartedAt().toString()))
                 .toList();
         return ResponseEntity.ok(summaries);
     }
-
-    public record RunResult(Long testRunId, String startedAt) {}
-    public record TestRunSummary(Long testRunId, String startedAt) {}
 }

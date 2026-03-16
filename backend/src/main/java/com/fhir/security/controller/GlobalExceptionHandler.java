@@ -2,6 +2,7 @@ package com.fhir.security.controller;
 
 import com.fhir.security.dto.ApiError;
 import com.fhir.security.exception.FhirServerException;
+import com.fhir.security.exception.TestRunNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -25,6 +26,13 @@ public class GlobalExceptionHandler {
                 .body(ApiError.of(message, "NOT_CONNECTED"));
     }
 
+    @ExceptionHandler(TestRunNotFoundException.class)
+    public ResponseEntity<ApiError> handleTestRunNotFound(TestRunNotFoundException e) {
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ApiError.of(e.getMessage(), "TEST_RUN_NOT_FOUND"));
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiError> handleIllegalArgument(IllegalArgumentException e) {
         if (e.getMessage() != null && e.getMessage().contains("Server not found")) {
@@ -35,6 +43,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(ApiError.of(e.getMessage(), "INVALID_ARGUMENT"));
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiError> handleGeneric(Exception e) {
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiError.of("An unexpected error occurred", "INTERNAL_ERROR"));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

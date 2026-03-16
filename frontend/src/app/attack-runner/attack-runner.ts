@@ -6,7 +6,8 @@ import { RouterLink } from '@angular/router';
 import { AttackService } from '../services/attack.service';
 import { ServerService } from '../services/server.service';
 import { FhirServer } from '../models/server.model';
-import { TestRun, TestResult } from '../models/attack.model';
+import { TestRun } from '../models/attack.model';
+import { formatApiError } from '../utils/error.utils';
 
 @Component({
   selector: 'app-attack-runner',
@@ -131,7 +132,7 @@ export class AttackRunnerComponent implements OnInit {
         this.cdr.detectChanges();
       },
       error: (err) => {
-        this.errorMessage = this.formatError(err);
+        this.errorMessage = formatApiError(err);
         this.cdr.detectChanges();
       }
     });
@@ -170,7 +171,7 @@ export class AttackRunnerComponent implements OnInit {
         this.cdr.detectChanges();
       },
       error: (err) => {
-        this.errorMessage = this.formatError(err);
+        this.errorMessage = formatApiError(err);
         this.running = false;
         this.cdr.detectChanges();
       }
@@ -184,15 +185,9 @@ export class AttackRunnerComponent implements OnInit {
         this.cdr.detectChanges();
       },
       error: (err) => {
-        this.errorMessage = this.formatError(err);
+        this.errorMessage = formatApiError(err);
         this.cdr.detectChanges();
       }
     });
-  }
-
-  private formatError(err: { error?: { error?: string; errors?: string[]; message?: string } }): string {
-    const e = err?.error;
-    if (e?.errors?.length) return e.errors.join('; ');
-    return e?.error || e?.message || 'Request failed';
   }
 }

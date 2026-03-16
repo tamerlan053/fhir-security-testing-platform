@@ -4,6 +4,7 @@ import com.fhir.security.dto.response.TestResultResponse;
 import com.fhir.security.dto.response.TestRunResponse;
 import com.fhir.security.entity.TestResult;
 import com.fhir.security.entity.TestRun;
+import com.fhir.security.exception.TestRunNotFoundException;
 import com.fhir.security.repository.TestRunRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +31,7 @@ public class TestResultController {
     public ResponseEntity<TestRunResponse> getResults(@PathVariable Long testRunId) {
         log.info("GET /api/results/{} - fetching test run results", testRunId);
         TestRun run = testRunRepository.findById(testRunId)
-                .orElseThrow(() -> new IllegalArgumentException("Test run not found: " + testRunId));
+                .orElseThrow(() -> new TestRunNotFoundException(testRunId));
 
         List<TestResultResponse> results = run.getTestResults().stream()
                 .map(this::toResponse)

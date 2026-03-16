@@ -7,17 +7,13 @@ import java.util.List;
 @Component
 public class AttackRegistry {
 
-    private final List<AttackScenario> scenarios;
+    private final List<ExecutableAttack> scenarios;
 
-    public AttackRegistry(List<AttackScenario> scenarios) {
+    public AttackRegistry(List<ExecutableAttack> scenarios) {
         this.scenarios = scenarios;
     }
 
-    public List<AttackScenario> getScenarios() {
-        return scenarios;
-    }
-
-    public List<AttackScenario> getAll() {
+    public List<ExecutableAttack> getScenarios() {
         return scenarios;
     }
 }

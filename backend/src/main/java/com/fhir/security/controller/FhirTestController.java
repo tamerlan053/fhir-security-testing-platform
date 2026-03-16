@@ -1,5 +1,6 @@
 package com.fhir.security.controller;
 
+import com.fhir.security.dto.request.ConnectRequest;
 import com.fhir.security.dto.request.CreatePatientRequest;
 import com.fhir.security.dto.response.CreatePatientResult;
 import com.fhir.security.dto.response.ObservationDto;
@@ -30,10 +31,10 @@ public class FhirTestController {
     }
 
     @PostMapping("/connect")
-    public String connect(@RequestParam String baseUrl) {
-        log.info("Connecting to FHIR server: {}", baseUrl);
-        fhirClientService.connectToServer(baseUrl);
-        return "Connected to " + baseUrl;
+    public String connect(@Valid @RequestBody ConnectRequest request) {
+        log.info("Connecting to FHIR server: {}", request.baseUrl());
+        fhirClientService.connectToServer(request.baseUrl());
+        return "Connected to " + request.baseUrl();
     }
 
     @GetMapping("/test")

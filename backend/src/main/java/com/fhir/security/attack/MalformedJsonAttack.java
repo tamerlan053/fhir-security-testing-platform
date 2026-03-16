@@ -5,7 +5,7 @@ import com.fhir.security.service.AttackHttpClient;
 import org.springframework.stereotype.Component;
 
 @Component
-public class MalformedJsonAttack implements AttackScenario {
+public class MalformedJsonAttack implements ExecutableAttack {
 
     private final AttackHttpClient httpClient;
 

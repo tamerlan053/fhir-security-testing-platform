@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ServerService } from '../services/server.service';
 import { FhirServer, AddServerRequest } from '../models/server.model';
+import { formatApiError } from '../utils/error.utils';
 
 @Component({
   selector: 'app-server-management',
@@ -97,7 +98,7 @@ export class ServerManagementComponent implements OnInit {
         this.cdr.detectChanges();
       },
       error: (err) => {
-        this.errorMessage = this.formatError(err);
+        this.errorMessage = formatApiError(err);
         this.loading = false;
         this.cdr.detectChanges();
       }
@@ -114,7 +115,7 @@ export class ServerManagementComponent implements OnInit {
         this.loadServers();
       },
       error: (err) => {
-        this.errorMessage = this.formatError(err);
+        this.errorMessage = formatApiError(err);
         this.cdr.detectChanges();
       }
     });
@@ -126,15 +127,9 @@ export class ServerManagementComponent implements OnInit {
     this.serverService.deleteServer(id).subscribe({
       next: () => this.loadServers(),
       error: (err) => {
-        this.errorMessage = this.formatError(err);
+        this.errorMessage = formatApiError(err);
         this.cdr.detectChanges();
       }
     });
-  }
-
-  private formatError(err: { error?: { error?: string; errors?: string[]; message?: string } }): string {
-    const e = err?.error;
-    if (e?.errors?.length) return e.errors.join('; ');
-    return e?.error || e?.message || 'Request failed';
   }
 }
