@@ -38,6 +38,9 @@ import { formatApiError } from '../utils/error.utils';
 
       <div class="results-section" *ngIf="currentRun">
         <h3>Results — {{ currentRun.serverName }} ({{ currentRun.startedAt }})</h3>
+        <p class="summary" *ngIf="currentRun.results.length > 0">
+          {{ getVulnerableCount() }} of {{ currentRun.results.length }} attacks vulnerable
+        </p>
         <table class="results-table">
           <thead>
             <tr>
@@ -86,6 +89,7 @@ import { formatApiError } from '../utils/error.utils';
     .error { color: #c62828; }
     .success { color: #2e7d32; }
     .results-section { margin-top: 24px; }
+    .summary { margin: 8px 0; font-weight: 500; color: #333; }
     .results-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
     .results-table th, .results-table td { border: 1px solid #ddd; padding: 10px 12px; text-align: left; }
     .results-table th { background: #f5f5f5; font-weight: 600; }
@@ -176,6 +180,10 @@ export class AttackRunnerComponent implements OnInit {
         this.cdr.detectChanges();
       }
     });
+  }
+
+  getVulnerableCount(): number {
+    return this.currentRun?.results?.filter(r => r.vulnerable).length ?? 0;
   }
 
   loadRun(testRunId: number): void {

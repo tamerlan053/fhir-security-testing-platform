@@ -56,7 +56,7 @@ public class AttackHttpClient {
              java.io.BufferedReader br = new java.io.BufferedReader(reader)) {
             return br.lines().collect(Collectors.joining("\n"));
         }
-    }
+    }а
 
     public record HttpResult(int statusCode, String responseBody) {}
 }
