@@ -33,7 +33,7 @@ public class DuplicateFieldsAttack implements ExecutableAttack {
         int statusCode = httpResult.statusCode();
         String responseBody = httpResult.responseBody();
 
-        boolean vulnerable = statusCode == 200 || statusCode == 500;
+        boolean vulnerable = statusCode == 200 || statusCode == 201 || statusCode == 500;
 
         return new AttackResult(statusCode, responseBody, vulnerable);
     }

@@ -33,8 +33,8 @@ public class MalformedJsonAttack implements ExecutableAttack {
         int statusCode = httpResult.statusCode();
         String responseBody = httpResult.responseBody();
 
-        // 400 = correct validation; 200 or 500 = vulnerable (bad validation or server crash)
-        boolean vulnerable = statusCode == 200 || statusCode == 500;
+        // 400/412 = correct validation; 200/201/500 = vulnerable (accepts when shouldn't or server crash)
+        boolean vulnerable = statusCode == 200 || statusCode == 201 || statusCode == 500;
 
         return new AttackResult(statusCode, responseBody, vulnerable);
     }
