@@ -41,6 +41,9 @@ import { formatApiError } from '../utils/error.utils';
         <p class="summary" *ngIf="currentRun.results.length > 0">
           {{ getVulnerableCount() }} of {{ currentRun.results.length }} attacks vulnerable
         </p>
+        <p class="summary covert-summary" *ngIf="getCovertChannelResultCount() > 0">
+          {{ getCovertChannelVulnerableCount() }} of {{ getCovertChannelResultCount() }} covert channel attacks allow hidden data
+        </p>
         <table class="results-table">
           <thead>
             <tr>
@@ -90,6 +93,7 @@ import { formatApiError } from '../utils/error.utils';
     .success { color: #2e7d32; }
     .results-section { margin-top: 24px; }
     .summary { margin: 8px 0; font-weight: 500; color: #333; }
+    .covert-summary { font-size: 0.95em; color: #5d4037; }
     .results-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
     .results-table th, .results-table td { border: 1px solid #ddd; padding: 10px 12px; text-align: left; }
     .results-table th { background: #f5f5f5; font-weight: 600; }
@@ -102,6 +106,14 @@ import { formatApiError } from '../utils/error.utils';
   `]
 })
 export class AttackRunnerComponent implements OnInit {
+  private readonly covertChannelNames = [
+    'Extension Fields Misuse',
+    'Manipulated Identifiers',
+    'Embedded Contained Resources',
+    'Unexpected JSON Fragments',
+    'Encoded Hidden Data',
+  ];
+
   servers: FhirServer[] = [];
   selectedServerId: number | null = null;
   currentRun: TestRun | null = null;
@@ -184,6 +196,18 @@ export class AttackRunnerComponent implements OnInit {
 
   getVulnerableCount(): number {
     return this.currentRun?.results?.filter(r => r.vulnerable).length ?? 0;
+  }
+
+  getCovertChannelResultCount(): number {
+    return this.currentRun?.results?.filter(r => this.covertChannelNames.includes(r.scenarioName)).length ?? 0;
+  }
+
+  getCovertChannelVulnerableCount(): number {
+    return (
+      this.currentRun?.results?.filter(
+        r => this.covertChannelNames.includes(r.scenarioName) && r.vulnerable,
+      ).length ?? 0
+    );
   }
 
   loadRun(testRunId: number): void {
