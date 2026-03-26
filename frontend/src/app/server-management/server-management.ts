@@ -15,6 +15,7 @@ import { formatApiError } from '../utils/error.utils';
       <h2>FHIR Server Management</h2>
       <div class="nav">
         <a routerLink="/attacks">Run Security Tests →</a>
+        <a routerLink="/compare">Compare servers →</a>
       </div>
 
       <form (ngSubmit)="onAdd()" class="form">
@@ -57,7 +58,7 @@ import { formatApiError } from '../utils/error.utils';
   `,
   styles: [`
     .container { padding: 20px; max-width: 800px; }
-    .nav { margin-bottom: 16px; }
+    .nav { margin-bottom: 16px; display: flex; gap: 16px; flex-wrap: wrap; }
     .nav a { color: #1976d2; text-decoration: none; }
     .nav a:hover { text-decoration: underline; }
     .form { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }

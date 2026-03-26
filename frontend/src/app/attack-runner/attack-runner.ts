@@ -18,6 +18,7 @@ import { formatApiError } from '../utils/error.utils';
       <h2>Security Test Runner</h2>
       <div class="nav">
         <a routerLink="/servers">← Back to Servers</a>
+        <a routerLink="/compare">Compare results</a>
       </div>
 
       <div class="controls">
@@ -79,7 +80,7 @@ import { formatApiError } from '../utils/error.utils';
   `,
   styles: [`
     .container { padding: 20px; max-width: 900px; }
-    .nav { margin-bottom: 20px; }
+    .nav { margin-bottom: 20px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
     .nav a { color: #1976d2; text-decoration: none; }
     .nav a:hover { text-decoration: underline; }
     .controls { display: flex; gap: 16px; align-items: flex-end; margin-bottom: 20px; flex-wrap: wrap; }
