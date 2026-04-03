@@ -42,6 +42,9 @@ import { formatApiError } from '../utils/error.utils';
         <p class="summary" *ngIf="currentRun.results.length > 0">
           {{ getVulnerableCount() }} of {{ currentRun.results.length }} attacks vulnerable
         </p>
+        <p class="summary access-summary" *ngIf="getAccessControlResultCount() > 0">
+          {{ getAccessControlVulnerableCount() }} of {{ getAccessControlResultCount() }} access-control attacks vulnerable
+        </p>
         <p class="summary covert-summary" *ngIf="getCovertChannelResultCount() > 0">
           {{ getCovertChannelVulnerableCount() }} of {{ getCovertChannelResultCount() }} covert channel attacks allow hidden data
         </p>
@@ -94,6 +97,7 @@ import { formatApiError } from '../utils/error.utils';
     .success { color: #2e7d32; }
     .results-section { margin-top: 24px; }
     .summary { margin: 8px 0; font-weight: 500; color: #333; }
+    .access-summary { font-size: 0.95em; color: #37474f; }
     .covert-summary { font-size: 0.95em; color: #5d4037; }
     .results-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
     .results-table th, .results-table td { border: 1px solid #ddd; padding: 10px 12px; text-align: left; }
@@ -113,6 +117,13 @@ export class AttackRunnerComponent implements OnInit {
     'Embedded Contained Resources',
     'Unexpected JSON Fragments',
     'Encoded Hidden Data',
+  ];
+
+  private readonly accessControlScenarioNames = [
+    'Cross-patient Access',
+    'Owner/Reference Manipulation',
+    'ID Tampering',
+    'Unauthorized Resource Retrieval',
   ];
 
   servers: FhirServer[] = [];
@@ -207,6 +218,20 @@ export class AttackRunnerComponent implements OnInit {
     return (
       this.currentRun?.results?.filter(
         r => this.covertChannelNames.includes(r.scenarioName) && r.vulnerable,
+      ).length ?? 0
+    );
+  }
+
+  getAccessControlResultCount(): number {
+    return this.currentRun?.results?.filter(r =>
+      this.accessControlScenarioNames.includes(r.scenarioName),
+    ).length ?? 0;
+  }
+
+  getAccessControlVulnerableCount(): number {
+    return (
+      this.currentRun?.results?.filter(
+        r => this.accessControlScenarioNames.includes(r.scenarioName) && r.vulnerable,
       ).length ?? 0
     );
   }

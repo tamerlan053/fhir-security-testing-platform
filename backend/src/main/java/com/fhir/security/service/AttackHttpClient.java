@@ -44,6 +44,49 @@ public class AttackHttpClient {
         }
     }
 
+    public HttpResult get(String url) {
+        try {
+            return restTemplate.execute(
+                    URI.create(url),
+                    HttpMethod.GET,
+                    request -> {
+                        // No-op: GET usually has no request body
+                    },
+                    this::extractStatusAndBody
+            );
+        } catch (RestClientResponseException e) {
+            int statusCode = e.getStatusCode().value();
+            String responseBody = e.getResponseBodyAsString() != null ? e.getResponseBodyAsString() : "";
+            return new HttpResult(statusCode, responseBody);
+        } catch (RestClientException e) {
+            log.warn("HTTP request failed: {} - {}", url, e.getMessage());
+            return new HttpResult(0, "Error: " + e.getMessage());
+        }
+    }
+
+    public HttpResult put(String url, String body) {
+        try {
+            return restTemplate.execute(
+                    URI.create(url),
+                    HttpMethod.PUT,
+                    request -> {
+                        request.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+                        if (body != null) {
+                            request.getBody().write(body.getBytes(StandardCharsets.UTF_8));
+                        }
+                    },
+                    this::extractStatusAndBody
+            );
+        } catch (RestClientResponseException e) {
+            int statusCode = e.getStatusCode().value();
+            String responseBody = e.getResponseBodyAsString() != null ? e.getResponseBodyAsString() : "";
+            return new HttpResult(statusCode, responseBody);
+        } catch (RestClientException e) {
+            log.warn("HTTP request failed: {} - {}", url, e.getMessage());
+            return new HttpResult(0, "Error: " + e.getMessage());
+        }
+    }
+
     private HttpResult extractStatusAndBody(ClientHttpResponse response) throws IOException {
         int statusCode = response.getStatusCode().value();
         String responseBody = readFully(response.getBody());
