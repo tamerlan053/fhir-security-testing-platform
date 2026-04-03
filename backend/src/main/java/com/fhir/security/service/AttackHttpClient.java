@@ -3,6 +3,7 @@ package com.fhir.security.service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
+import org.springframework.http.client.ClientHttpRequest;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
@@ -24,67 +25,60 @@ public class AttackHttpClient {
     private final RestTemplate restTemplate = new RestTemplate();
 
     public HttpResult post(String url, String body) {
-        try {
-            return restTemplate.execute(
-                    URI.create(url),
-                    HttpMethod.POST,
-                    request -> {
-                        request.getHeaders().setContentType(MediaType.APPLICATION_JSON);
-                        request.getBody().write(body.getBytes(StandardCharsets.UTF_8));
-                    },
-                    this::extractStatusAndBody
-            );
-        } catch (RestClientResponseException e) {
-            int statusCode = e.getStatusCode().value();
-            String responseBody = e.getResponseBodyAsString() != null ? e.getResponseBodyAsString() : "";
-            return new HttpResult(statusCode, responseBody);
-        } catch (RestClientException e) {
-            log.warn("HTTP request failed: {} - {}", url, e.getMessage());
-            return new HttpResult(0, "Error: " + e.getMessage());
-        }
+        return execute(
+                url,
+                HttpMethod.POST,
+                request -> {
+                    request.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+                    request.getBody().write(body.getBytes(StandardCharsets.UTF_8));
+                }
+        );
     }
 
     public HttpResult get(String url) {
+        return execute(url, HttpMethod.GET, request -> {
+            // No-op: GET usually has no request body
+        });
+    }
+
+    public HttpResult put(String url, String body) {
+        return execute(
+                url,
+                HttpMethod.PUT,
+                request -> {
+                    request.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+                    if (body != null) {
+                        request.getBody().write(body.getBytes(StandardCharsets.UTF_8));
+                    }
+                }
+        );
+    }
+
+    private HttpResult execute(String url, HttpMethod method, RequestCallback requestCallback) {
         try {
             return restTemplate.execute(
                     URI.create(url),
-                    HttpMethod.GET,
-                    request -> {
-                        // No-op: GET usually has no request body
-                    },
+                    method,
+                    requestCallback::apply,
                     this::extractStatusAndBody
             );
         } catch (RestClientResponseException e) {
-            int statusCode = e.getStatusCode().value();
-            String responseBody = e.getResponseBodyAsString() != null ? e.getResponseBodyAsString() : "";
-            return new HttpResult(statusCode, responseBody);
+            return toHttpResult(e);
         } catch (RestClientException e) {
             log.warn("HTTP request failed: {} - {}", url, e.getMessage());
             return new HttpResult(0, "Error: " + e.getMessage());
         }
     }
 
-    public HttpResult put(String url, String body) {
-        try {
-            return restTemplate.execute(
-                    URI.create(url),
-                    HttpMethod.PUT,
-                    request -> {
-                        request.getHeaders().setContentType(MediaType.APPLICATION_JSON);
-                        if (body != null) {
-                            request.getBody().write(body.getBytes(StandardCharsets.UTF_8));
-                        }
-                    },
-                    this::extractStatusAndBody
-            );
-        } catch (RestClientResponseException e) {
-            int statusCode = e.getStatusCode().value();
-            String responseBody = e.getResponseBodyAsString() != null ? e.getResponseBodyAsString() : "";
-            return new HttpResult(statusCode, responseBody);
-        } catch (RestClientException e) {
-            log.warn("HTTP request failed: {} - {}", url, e.getMessage());
-            return new HttpResult(0, "Error: " + e.getMessage());
-        }
+    private static HttpResult toHttpResult(RestClientResponseException e) {
+        int statusCode = e.getStatusCode().value();
+        String responseBody = e.getResponseBodyAsString() != null ? e.getResponseBodyAsString() : "";
+        return new HttpResult(statusCode, responseBody);
+    }
+
+    @FunctionalInterface
+    private interface RequestCallback {
+        void apply(ClientHttpRequest request) throws IOException;
     }
 
     private HttpResult extractStatusAndBody(ClientHttpResponse response) throws IOException {

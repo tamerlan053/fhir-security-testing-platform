@@ -1,6 +1,5 @@
 package com.fhir.security.entity;
 
-import com.fhir.security.entity.TestResult;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;

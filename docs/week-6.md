@@ -114,9 +114,3 @@ Across tested servers, write-based privilege escalation paths (reference manipul
 - Token misuse attempts (invalid/expired tokens, tampered headers)
 - Classify authentication strategies per server and document weak or missing enforcement
 
----
-
-## Demonstration Line
-
-"Some servers allow improper resource access."
-

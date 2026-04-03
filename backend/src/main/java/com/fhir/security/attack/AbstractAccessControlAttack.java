@@ -2,7 +2,6 @@ package com.fhir.security.attack;
 
 import com.fhir.security.entity.FhirServer;
 import com.fhir.security.service.AttackHttpClient;
-import org.springframework.util.StringUtils;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -65,17 +64,6 @@ public abstract class AbstractAccessControlAttack implements ExecutableAttack {
 
     protected String encodeQueryParam(String raw) {
         return URLEncoder.encode(raw, StandardCharsets.UTF_8);
-    }
-
-    protected String requireIdOrReturnBody(CreateResult createResult, StringBuilder responseBodySink) {
-        if (createResult == null) return null;
-        if (createResult.id() != null && !createResult.id().isBlank()) {
-            return createResult.id();
-        }
-        if (responseBodySink != null) {
-            responseBodySink.append(createResult.responseBody());
-        }
-        return null;
     }
 }
 
