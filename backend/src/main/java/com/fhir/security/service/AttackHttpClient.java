@@ -25,9 +25,17 @@ public class AttackHttpClient {
     private final RestTemplate restTemplate = new RestTemplate();
 
     public HttpResult post(String url, String body) {
+        return post(url, body, null);
+    }
+
+    /**
+     * POST with optional extra headers (e.g. {@code Authorization}) merged before the body is written.
+     */
+    public HttpResult post(String url, String body, HttpHeaders headers) {
         return execute(
                 url,
                 HttpMethod.POST,
+                headers,
                 request -> {
                     request.getHeaders().setContentType(MediaType.APPLICATION_JSON);
                     request.getBody().write(body.getBytes(StandardCharsets.UTF_8));
@@ -36,15 +44,30 @@ public class AttackHttpClient {
     }
 
     public HttpResult get(String url) {
-        return execute(url, HttpMethod.GET, request -> {
-            // No-op: GET usually has no request body
+        return get(url, null);
+    }
+
+    /**
+     * GET with optional extra headers (e.g. {@code Authorization: Bearer …}).
+     */
+    public HttpResult get(String url, HttpHeaders headers) {
+        return execute(url, HttpMethod.GET, headers, request -> {
+            // No request body
         });
     }
 
     public HttpResult put(String url, String body) {
+        return put(url, body, null);
+    }
+
+    /**
+     * PUT with optional extra headers.
+     */
+    public HttpResult put(String url, String body, HttpHeaders headers) {
         return execute(
                 url,
                 HttpMethod.PUT,
+                headers,
                 request -> {
                     request.getHeaders().setContentType(MediaType.APPLICATION_JSON);
                     if (body != null) {
@@ -54,18 +77,23 @@ public class AttackHttpClient {
         );
     }
 
-    private HttpResult execute(String url, HttpMethod method, RequestCallback requestCallback) {
+    private HttpResult execute(String url, HttpMethod method, HttpHeaders additionalHeaders, RequestCallback requestCallback) {
         try {
             return restTemplate.execute(
                     URI.create(url),
                     method,
-                    requestCallback::apply,
+                    request -> {
+                        if (additionalHeaders != null) {
+                            request.getHeaders().putAll(additionalHeaders);
+                        }
+                        requestCallback.apply(request);
+                    },
                     this::extractStatusAndBody
             );
         } catch (RestClientResponseException e) {
             return toHttpResult(e);
         } catch (RestClientException e) {
-            log.warn("HTTP request failed: {} - {}", url, e.getMessage());
+            log.warn("HTTP failed: {} - {}", url, e.getMessage());
             return new HttpResult(0, "Error: " + e.getMessage());
         }
     }
