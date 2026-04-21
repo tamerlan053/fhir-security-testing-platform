@@ -5,7 +5,7 @@ import { RouterLink } from '@angular/router';
 import { AttackService } from '../services/attack.service';
 import { ServerService } from '../services/server.service';
 import { FhirServer } from '../models/server.model';
-import { CompareResponse } from '../models/compare.model';
+import { CompareCell, CompareResponse } from '../models/compare.model';
 import { formatApiError } from '../utils/error.utils';
 
 @Component({
@@ -59,7 +59,7 @@ import { formatApiError } from '../utils/error.utils';
                   <span *ngIf="col.testRunId === null" class="warn">No run yet</span>
                 </div>
                 <div class="hdr-stats" *ngIf="col.resultCount > 0">
-                  {{ col.vulnerableCount }} / {{ col.resultCount }} vulnerable
+                  {{ col.vulnerableCount }} / {{ col.resultCount }} VULNERABLE
                 </div>
               </th>
             </tr>
@@ -69,14 +69,18 @@ import { formatApiError } from '../utils/error.utils';
               <td class="attack-col">{{ row.scenarioName }}</td>
               <td
                 *ngFor="let cell of row.cells; let i = index"
-                [class.vulnerable]="cell.present && cell.vulnerable"
-                [class.missing]="!cell.present"
+                [ngClass]="cellClasses(cell)"
               >
                 <ng-container *ngIf="cell.present">
-                  <span class="code">{{ cell.statusCode }}</span>
-                  <span class="flag">{{ cell.vulnerable ? '⚠ Vulnerable' : '✓ OK' }}</span>
+                  <div class="cell-line"><span class="code">{{ cell.statusCode }}</span></div>
+                  <div class="cell-line" *ngIf="cell.classification">
+                    <span class="badge" [ngClass]="badgeClass(cell)">{{ cell.classification }}</span>
+                  </div>
+                  <div class="cell-reason" *ngIf="cell.reason" [title]="cell.reason">
+                    {{ truncate(cell.reason, 56) }}
+                  </div>
                 </ng-container>
-                <span *ngIf="!cell.present">—</span>
+                <span *ngIf="!cell.present" class="missing">—</span>
               </td>
             </tr>
             <tr *ngIf="c.attacks.length === 0">
@@ -111,10 +115,21 @@ import { formatApiError } from '../utils/error.utils';
     .attack-col { min-width: 200px; font-weight: 500; background: #fafafa; }
     .hdr-name { font-weight: 600; }
     .hdr-meta, .hdr-stats { font-size: 0.8em; color: #555; margin-top: 4px; }
-    .matrix td.vulnerable { background: #ffebee; }
-    .matrix td.missing { color: #999; }
-    .code { font-family: monospace; margin-right: 8px; }
-    .flag { white-space: nowrap; }
+    .matrix td.cell-vulnerable { background: #ffebee; }
+    .matrix td.cell-misconfigured { background: #fff3e0; }
+    .matrix td.cell-open-policy { background: #e3f2fd; }
+    .matrix td.cell-inconclusive { background: #f5f5f5; }
+    .matrix td.cell-secure { background: #e8f5e9; }
+    .matrix td.missing-cell { color: #999; }
+    .cell-line { margin-bottom: 4px; }
+    .cell-reason { font-size: 0.78rem; color: #555; line-height: 1.25; max-width: 200px; }
+    .code { font-family: monospace; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.68rem; font-weight: 700; }
+    .badge-vulnerable { background: #ffcdd2; color: #b71c1c; }
+    .badge-misconfigured { background: #ffe0b2; color: #e65100; }
+    .badge-open-policy { background: #bbdefb; color: #0d47a1; }
+    .badge-inconclusive { background: #eeeeee; color: #424242; }
+    .badge-secure { background: #c8e6c9; color: #1b5e20; }
   `],
 })
 export class ServerCompareComponent implements OnInit {
@@ -152,6 +167,36 @@ export class ServerCompareComponent implements OnInit {
       this.selectedIds.add(id);
     }
     this.selectedIds = new Set(this.selectedIds);
+  }
+
+  cellClasses(cell: CompareCell): Record<string, boolean> {
+    if (!cell.present) {
+      return { 'missing-cell': true };
+    }
+    const c = (cell.classification ?? (cell.vulnerable ? 'VULNERABLE' : 'SECURE')).toUpperCase();
+    return {
+      'cell-vulnerable': c === 'VULNERABLE',
+      'cell-misconfigured': c === 'MISCONFIGURED',
+      'cell-open-policy': c === 'OPEN_POLICY',
+      'cell-inconclusive': c === 'INCONCLUSIVE',
+      'cell-secure': c === 'SECURE',
+    };
+  }
+
+  badgeClass(cell: CompareCell): Record<string, boolean> {
+    const key = (cell.classification ?? (cell.vulnerable ? 'VULNERABLE' : 'SECURE')).toLowerCase().replace(/_/g, '-');
+    return {
+      'badge-vulnerable': key === 'vulnerable',
+      'badge-misconfigured': key === 'misconfigured',
+      'badge-open-policy': key === 'open-policy',
+      'badge-inconclusive': key === 'inconclusive',
+      'badge-secure': key === 'secure',
+    };
+  }
+
+  truncate(s: string, max: number): string {
+    if (!s) return '';
+    return s.length <= max ? s : s.slice(0, max) + '…';
   }
 
   loadComparison(): void {

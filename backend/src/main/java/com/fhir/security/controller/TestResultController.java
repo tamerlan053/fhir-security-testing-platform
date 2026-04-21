@@ -1,5 +1,6 @@
 package com.fhir.security.controller;
 
+import com.fhir.security.attack.AttackClassification;
 import com.fhir.security.dto.response.CompareResponse;
 import com.fhir.security.dto.response.TestResultResponse;
 import com.fhir.security.dto.response.TestRunResponse;
@@ -84,11 +85,15 @@ public class TestResultController {
     }
 
     private TestResultResponse toResponse(TestResult tr) {
+        AttackClassification c = tr.getClassificationResolved();
         return new TestResultResponse(
                 tr.getId(),
                 tr.getScenario().getName(),
                 tr.getStatusCode(),
-                tr.isVulnerable(),
+                c == AttackClassification.VULNERABLE,
+                c.name(),
+                tr.getReasonResolved(),
+                tr.getSeverityResolved().name(),
                 tr.getResponseBody()
         );
     }

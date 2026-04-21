@@ -60,6 +60,9 @@ public class AttackExecutorService {
             tr.setScenario(entityScenario);
             tr.setStatusCode(result.statusCode());
             tr.setResponseBody(result.responseBody());
+            tr.setClassification(result.classification());
+            tr.setReason(result.reason());
+            tr.setSeverity(result.severity());
             tr.setVulnerable(result.vulnerable());
             testResultRepository.save(tr);
         }

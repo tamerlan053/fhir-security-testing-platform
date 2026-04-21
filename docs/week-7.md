@@ -6,7 +6,7 @@
 |--------|----------------|
 | **`ExecutableAttack` + `AttackResult`** | Each auth scenario stays a single pluggable attack; register new classes as `@Component` beans. |
 | **`AttackRegistry` + `AttackExecutorService`** | No new orchestration endpoints; runs are still `POST /api/attacks/run/{serverId}` and results `GET /api/results/{testRunId}`. |
-| **`AttackHttpClient`** | Already has `post` / `get` / `put`. **Week 7 requires sending custom headers** (e.g. `Authorization: Basic …`, `Authorization: Bearer …`). Plan to extend with overloads such as `get(url, HttpHeaders)` / `post(url, body, HttpHeaders)` or a small `execute(url, method, body, headers)` helper. |
+| **`AttackHttpClient`** | `get` / `post` / `put` with optional `HttpHeaders` (Week 6+). Week 7 adds **`postUrlEncoded`** for OAuth `token_endpoint` probes (`application/x-www-form-urlencoded`). |
 | **`FhirServer`** | Has `authenticationType` (string) for classification in UI/report; **it does not store secrets today**. For Basic Auth / Bearer tests you will either: (a) add optional encrypted fields (`basicUser`, `basicPassword`, `bearerToken`, etc.), (b) read test credentials from `application.properties` / env for known lab servers only, or (c) run token-misuse tests with **syntactically valid but wrong** tokens without server-specific secrets. Document the chosen approach in the report. |
 | **`attack-runner.ts`** | Same pattern as Week 6: add a `authScenarioNames` array (like `accessControlScenarioNames`) and a third summary line: *“X of Y auth-related attacks …”* |
 
@@ -187,10 +187,12 @@ Document any deviation (e.g. “401 = not vulnerable” explicitly).
 
 ## Registration & UI checklist (same pattern as Week 6)
 
-- [ ] All five attacks are Spring `@Component` beans (auto-discovered by `AttackRegistry`).
-- [ ] `getName()` strings are **stable** and duplicated exactly in `authScenarioNames` in `attack-runner.ts`.
-- [ ] New attacks appear in the results table like existing rows (Attack | Status Code | Vulnerable).
-- [ ] `AttackScenario` rows in DB populate on first run via existing `AttackExecutorService` flow.
+- [x] All five attacks are Spring `@Component` beans (auto-discovered by `AttackRegistry`).
+- [x] `getName()` strings are **stable** and duplicated exactly in `authScenarioNames` in `attack-runner.ts`.
+- [x] New attacks appear in the results table like existing rows (Attack | Status Code | Vulnerable).
+- [x] `AttackScenario` rows in DB populate on first run via existing `AttackExecutorService` flow.
+
+**Implemented (catalog refactored to 10 scenarios):** authentication is **`InvalidCredentialsAccessAttack`** (`Invalid Credentials Access Test`) plus **`OpenEndpointDetectionAttack`**. Shared discovery: `AuthEndpointSupport`, `AuthEnvironmentProbe`. Results template: [week-7-results.md](week-7-results.md).
 
 ---
 

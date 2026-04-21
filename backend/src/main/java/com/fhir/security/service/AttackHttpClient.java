@@ -123,5 +123,34 @@ public class AttackHttpClient {
         }
     }
 
+    /**
+     * POST with {@code application/x-www-form-urlencoded} body (OAuth token endpoint probes).
+     */
+    public HttpResult postUrlEncoded(String url, String formBody, HttpHeaders additionalHeaders) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+            if (additionalHeaders != null) {
+                headers.putAll(additionalHeaders);
+            }
+            HttpEntity<String> entity = new HttpEntity<>(formBody, headers);
+            ResponseEntity<String> response = restTemplate.exchange(
+                    URI.create(url),
+                    HttpMethod.POST,
+                    entity,
+                    String.class
+            );
+            return new HttpResult(
+                    response.getStatusCode().value(),
+                    response.getBody() != null ? response.getBody() : ""
+            );
+        } catch (RestClientResponseException e) {
+            return toHttpResult(e);
+        } catch (RestClientException e) {
+            log.warn("HTTP failed: {} - {}", url, e.getMessage());
+            return new HttpResult(0, "Error: " + e.getMessage());
+        }
+    }
+
     public record HttpResult(int statusCode, String responseBody) {}
 }

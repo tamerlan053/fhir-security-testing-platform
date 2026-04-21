@@ -3,6 +3,9 @@ export interface CompareCell {
   present: boolean;
   statusCode: number | null;
   vulnerable: boolean | null;
+  classification: string | null;
+  reason: string | null;
+  severity: string | null;
 }
 
 export interface CompareServerColumn {

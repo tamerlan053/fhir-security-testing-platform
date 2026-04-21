@@ -4,6 +4,7 @@ import com.fhir.security.dto.response.CompareAttackRowResponse;
 import com.fhir.security.dto.response.CompareCellResponse;
 import com.fhir.security.dto.response.CompareResponse;
 import com.fhir.security.dto.response.CompareServerColumnResponse;
+import com.fhir.security.attack.AttackClassification;
 import com.fhir.security.entity.FhirServer;
 import com.fhir.security.entity.TestResult;
 import com.fhir.security.entity.TestRun;
@@ -68,7 +69,9 @@ public class TestComparisonService {
                 ));
             } else {
                 List<TestResult> results = run.getTestResults();
-                int vuln = (int) results.stream().filter(TestResult::isVulnerable).count();
+                int vuln = (int) results.stream()
+                        .filter(tr -> tr.getClassificationResolved() == AttackClassification.VULNERABLE)
+                        .count();
                 columns.add(new CompareServerColumnResponse(
                         id,
                         s.getName(),
@@ -95,18 +98,25 @@ public class TestComparisonService {
             for (Long id : uniqueInOrder) {
                 TestRun run = latestRunByServer.get(id);
                 if (run == null) {
-                    cells.add(new CompareCellResponse(id, false, null, null));
+                    cells.add(new CompareCellResponse(id, false, null, null, null, null, null));
                     continue;
                 }
                 Optional<TestResult> match = run.getTestResults().stream()
                         .filter(tr -> scenarioName.equals(tr.getScenario().getName()))
                         .findFirst();
                 if (match.isEmpty()) {
-                    cells.add(new CompareCellResponse(id, false, null, null));
+                    cells.add(new CompareCellResponse(id, false, null, null, null, null, null));
                 } else {
                     TestResult tr = match.get();
+                    AttackClassification c = tr.getClassificationResolved();
                     cells.add(new CompareCellResponse(
-                            id, true, tr.getStatusCode(), tr.isVulnerable()
+                            id,
+                            true,
+                            tr.getStatusCode(),
+                            c == AttackClassification.VULNERABLE,
+                            c.name(),
+                            tr.getReasonResolved(),
+                            tr.getSeverityResolved().name()
                     ));
                 }
             }

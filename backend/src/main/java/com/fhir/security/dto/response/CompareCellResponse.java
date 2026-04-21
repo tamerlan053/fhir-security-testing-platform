@@ -7,5 +7,8 @@ public record CompareCellResponse(
         long serverId,
         boolean present,
         Integer statusCode,
-        Boolean vulnerable
+        Boolean vulnerable,
+        String classification,
+        String reason,
+        String severity
 ) {}

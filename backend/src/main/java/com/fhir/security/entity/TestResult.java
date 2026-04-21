@@ -1,5 +1,7 @@
 package com.fhir.security.entity;
 
+import com.fhir.security.attack.AttackClassification;
+import com.fhir.security.attack.AttackSeverity;
 import jakarta.persistence.*;
 
 @Entity
@@ -20,6 +22,15 @@ public class TestResult {
 
     private int statusCode;
     private boolean vulnerable;
+
+    @Enumerated(EnumType.STRING)
+    private AttackClassification classification;
+
+    @Column(columnDefinition = "TEXT")
+    private String reason;
+
+    @Enumerated(EnumType.STRING)
+    private AttackSeverity severity;
 
     @Column(columnDefinition = "TEXT")
     private String responseBody;
@@ -79,5 +90,53 @@ public class TestResult {
 
     public void setResponseBody(String responseBody) {
         this.responseBody = responseBody;
+    }
+
+    public AttackClassification getClassification() {
+        return classification;
+    }
+
+    public void setClassification(AttackClassification classification) {
+        this.classification = classification;
+    }
+
+    public String getReason() {
+        return reason;
+    }
+
+    public void setReason(String reason) {
+        this.reason = reason;
+    }
+
+    public AttackSeverity getSeverity() {
+        return severity;
+    }
+
+    public void setSeverity(AttackSeverity severity) {
+        this.severity = severity;
+    }
+
+    /**
+     * Rows saved before classification columns existed: derive from {@link #vulnerable}.
+     */
+    public AttackClassification getClassificationResolved() {
+        if (classification != null) {
+            return classification;
+        }
+        return vulnerable ? AttackClassification.VULNERABLE : AttackClassification.SECURE;
+    }
+
+    public AttackSeverity getSeverityResolved() {
+        if (severity != null) {
+            return severity;
+        }
+        return AttackSeverity.INFO;
+    }
+
+    public String getReasonResolved() {
+        if (reason != null && !reason.isBlank()) {
+            return reason;
+        }
+        return vulnerable ? "Legacy result: marked vulnerable." : "Legacy result: not classified.";
     }
 }

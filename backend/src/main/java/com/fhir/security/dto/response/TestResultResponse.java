@@ -5,5 +5,8 @@ public record TestResultResponse(
         String scenarioName,
         int statusCode,
         boolean vulnerable,
+        String classification,
+        String reason,
+        String severity,
         String responseBody
 ) {}

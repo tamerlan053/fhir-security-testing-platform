@@ -6,7 +6,7 @@ import { RouterLink } from '@angular/router';
 import { AttackService } from '../services/attack.service';
 import { ServerService } from '../services/server.service';
 import { FhirServer } from '../models/server.model';
-import { TestRun } from '../models/attack.model';
+import { TestRun, TestResult } from '../models/attack.model';
 import { formatApiError } from '../utils/error.utils';
 
 @Component({
@@ -40,27 +40,42 @@ import { formatApiError } from '../utils/error.utils';
       <div class="results-section" *ngIf="currentRun">
         <h3>Results — {{ currentRun.serverName }} ({{ currentRun.startedAt }})</h3>
         <p class="summary" *ngIf="currentRun.results.length > 0">
-          {{ getVulnerableCount() }} of {{ currentRun.results.length }} attacks vulnerable
+          {{ getVulnerableCount() }} of {{ currentRun.results.length }} attacks classified as
+          <strong>VULNERABLE</strong> (confirmed weakness)
         </p>
-        <p class="summary access-summary" *ngIf="getAccessControlResultCount() > 0">
-          {{ getAccessControlVulnerableCount() }} of {{ getAccessControlResultCount() }} access-control attacks vulnerable
+        <p class="summary validation-summary" *ngIf="getValidationResultCount() > 0">
+          {{ getValidationVulnerableCount() }} of {{ getValidationResultCount() }} validation / injection scenarios
+          <strong>VULNERABLE</strong>
         </p>
         <p class="summary covert-summary" *ngIf="getCovertChannelResultCount() > 0">
-          {{ getCovertChannelVulnerableCount() }} of {{ getCovertChannelResultCount() }} covert channel attacks allow hidden data
+          {{ getCovertChannelVulnerableCount() }} of {{ getCovertChannelResultCount() }} covert-channel scenarios
+          <strong>VULNERABLE</strong>
+        </p>
+        <p class="summary auth-summary" *ngIf="getAuthScenarioResultCount() > 0">
+          {{ getAuthScenarioVulnerableCount() }} of {{ getAuthScenarioResultCount() }} authentication scenarios
+          <strong>VULNERABLE</strong>
+        </p>
+        <p class="summary access-summary" *ngIf="getAccessControlResultCount() > 0">
+          {{ getAccessControlVulnerableCount() }} of {{ getAccessControlResultCount() }} authorization / write scenarios
+          <strong>VULNERABLE</strong>
         </p>
         <table class="results-table">
           <thead>
             <tr>
               <th>Attack</th>
-              <th>Status Code</th>
-              <th>Vulnerable</th>
+              <th>Status</th>
+              <th>Classification &amp; explanation</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let r of currentRun.results" [class.vulnerable]="r.vulnerable">
+            <tr *ngFor="let r of currentRun.results" [ngClass]="resultRowClass(r)">
               <td>{{ r.scenarioName }}</td>
-              <td>{{ r.statusCode }}</td>
-              <td>{{ r.vulnerable ? '⚠ Vulnerable' : '✓ OK' }}</td>
+              <td class="mono">{{ r.statusCode }}</td>
+              <td class="classification-cell">
+                <span class="badge" [ngClass]="badgeClass(r)">{{ r.classification }}</span>
+                <span class="sev" *ngIf="r.severity">{{ r.severity }}</span>
+                <div class="reason" [title]="r.reason">{{ truncateReason(r.reason) }}</div>
+              </td>
             </tr>
             <tr *ngIf="currentRun.results.length === 0">
               <td colspan="3">No results yet.</td>
@@ -97,12 +112,28 @@ import { formatApiError } from '../utils/error.utils';
     .success { color: #2e7d32; }
     .results-section { margin-top: 24px; }
     .summary { margin: 8px 0; font-weight: 500; color: #333; }
+    .validation-summary { font-size: 0.95em; color: #1a237e; }
     .access-summary { font-size: 0.95em; color: #37474f; }
     .covert-summary { font-size: 0.95em; color: #5d4037; }
+    .auth-summary { font-size: 0.95em; color: #4a148c; }
     .results-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-    .results-table th, .results-table td { border: 1px solid #ddd; padding: 10px 12px; text-align: left; }
+    .results-table th, .results-table td { border: 1px solid #ddd; padding: 10px 12px; text-align: left; vertical-align: top; }
     .results-table th { background: #f5f5f5; font-weight: 600; }
-    .results-table tr.vulnerable { background: #ffebee; }
+    .mono { font-family: monospace; }
+    .classification-cell { min-width: 280px; }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.02em; margin-right: 8px; }
+    .sev { font-size: 0.72rem; color: #616161; font-weight: 600; }
+    .reason { font-size: 0.82em; color: #444; margin-top: 6px; line-height: 1.35; max-width: 480px; }
+    .badge-vulnerable { background: #ffcdd2; color: #b71c1c; }
+    .badge-misconfigured { background: #ffe0b2; color: #e65100; }
+    .badge-open-policy { background: #bbdefb; color: #0d47a1; }
+    .badge-inconclusive { background: #eeeeee; color: #424242; }
+    .badge-secure { background: #c8e6c9; color: #1b5e20; }
+    .row-vulnerable { background: #fff5f5; border-left: 4px solid #c62828; }
+    .row-misconfigured { background: #fff8f0; border-left: 4px solid #ef6c00; }
+    .row-open-policy { background: #f3f9ff; border-left: 4px solid #1565c0; }
+    .row-inconclusive { background: #fafafa; border-left: 4px solid #9e9e9e; }
+    .row-secure { background: #f4fbf4; border-left: 4px solid #2e7d32; }
     .runs-section { margin-top: 24px; }
     .runs-list { list-style: none; padding: 0; }
     .runs-list li { margin: 6px 0; }
@@ -111,19 +142,30 @@ import { formatApiError } from '../utils/error.utils';
   `]
 })
 export class AttackRunnerComponent implements OnInit {
+  /** Must match Java {@code getName()} exactly — validation & malicious requests (1–3). */
+  private readonly validationScenarioNames = [
+    'Malformed JSON Request',
+    'Metadata Manipulation',
+    'Unexpected Payload Injection',
+  ];
+
+  /** Covert / hidden data (4–6). */
   private readonly covertChannelNames = [
     'Extension Fields Misuse',
-    'Manipulated Identifiers',
-    'Embedded Contained Resources',
-    'Unexpected JSON Fragments',
+    'Contained Resource Smuggling',
     'Encoded Hidden Data',
   ];
 
+  /** Authentication (7–8). */
+  private readonly authScenarioNames = [
+    'Invalid Credentials Access Test',
+    'Open Endpoint Detection',
+  ];
+
+  /** Authorization & unauthorized writes (9–10). */
   private readonly accessControlScenarioNames = [
-    'Cross-patient Access',
-    'Owner/Reference Manipulation',
-    'ID Tampering',
-    'Unauthorized Resource Retrieval',
+    'Cross-Patient Access',
+    'Unauthorized Write / ID Tampering',
   ];
 
   servers: FhirServer[] = [];
@@ -210,6 +252,18 @@ export class AttackRunnerComponent implements OnInit {
     return this.currentRun?.results?.filter(r => r.vulnerable).length ?? 0;
   }
 
+  getValidationResultCount(): number {
+    return this.currentRun?.results?.filter(r => this.validationScenarioNames.includes(r.scenarioName)).length ?? 0;
+  }
+
+  getValidationVulnerableCount(): number {
+    return (
+      this.currentRun?.results?.filter(
+        r => this.validationScenarioNames.includes(r.scenarioName) && r.vulnerable,
+      ).length ?? 0
+    );
+  }
+
   getCovertChannelResultCount(): number {
     return this.currentRun?.results?.filter(r => this.covertChannelNames.includes(r.scenarioName)).length ?? 0;
   }
@@ -234,6 +288,48 @@ export class AttackRunnerComponent implements OnInit {
         r => this.accessControlScenarioNames.includes(r.scenarioName) && r.vulnerable,
       ).length ?? 0
     );
+  }
+
+  getAuthScenarioResultCount(): number {
+    return (
+      this.currentRun?.results?.filter(r => this.authScenarioNames.includes(r.scenarioName)).length ?? 0
+    );
+  }
+
+  getAuthScenarioVulnerableCount(): number {
+    return (
+      this.currentRun?.results?.filter(
+        r => this.authScenarioNames.includes(r.scenarioName) && r.vulnerable,
+      ).length ?? 0
+    );
+  }
+
+  resultRowClass(r: TestResult): Record<string, boolean> {
+    const c = r.classification ?? (r.vulnerable ? 'VULNERABLE' : 'SECURE');
+    return {
+      'row-vulnerable': c === 'VULNERABLE',
+      'row-misconfigured': c === 'MISCONFIGURED',
+      'row-open-policy': c === 'OPEN_POLICY',
+      'row-inconclusive': c === 'INCONCLUSIVE',
+      'row-secure': c === 'SECURE',
+    };
+  }
+
+  badgeClass(r: TestResult): Record<string, boolean> {
+    const key = (r.classification ?? (r.vulnerable ? 'VULNERABLE' : 'SECURE')).toLowerCase().replace(/_/g, '-');
+    return {
+      'badge-vulnerable': key === 'vulnerable',
+      'badge-misconfigured': key === 'misconfigured',
+      'badge-open-policy': key === 'open-policy',
+      'badge-inconclusive': key === 'inconclusive',
+      'badge-secure': key === 'secure',
+    };
+  }
+
+  truncateReason(s: string | undefined, max = 140): string {
+    if (!s) return '';
+    const t = s.trim();
+    return t.length <= max ? t : t.slice(0, max) + '…';
   }
 
   loadRun(testRunId: number): void {
