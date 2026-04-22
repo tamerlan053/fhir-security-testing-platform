@@ -8,6 +8,5 @@ public record AddServerRequest(
         String name,
         @NotBlank(message = "Base URL is required")
         @URL(message = "Base URL must be a valid URL")
-        String baseUrl,
-        String authenticationType
+        String baseUrl
 ) {}

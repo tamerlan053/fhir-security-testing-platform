@@ -15,7 +15,6 @@ public class FhirServer {
 
     private String name;
     private String baseUrl;
-    private String authenticationType;
 
     @OneToMany(mappedBy = "server", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TestRun> testRuns = new ArrayList<>();
@@ -23,10 +22,9 @@ public class FhirServer {
     public FhirServer() {
     }
 
-    public FhirServer(String name, String baseUrl, String authenticationType) {
+    public FhirServer(String name, String baseUrl) {
         this.name = name;
         this.baseUrl = baseUrl;
-        this.authenticationType = authenticationType;
     }
 
     public Long getId() {
@@ -51,13 +49,5 @@ public class FhirServer {
 
     public void setBaseUrl(String baseUrl) {
         this.baseUrl = baseUrl;
-    }
-
-    public String getAuthenticationType() {
-        return authenticationType;
-    }
-
-    public void setAuthenticationType(String authenticationType) {
-        this.authenticationType = authenticationType;
     }
 }

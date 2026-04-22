@@ -32,7 +32,6 @@ import { formatApiError } from '../utils/error.utils';
           <tr>
             <th>Name</th>
             <th>Base URL</th>
-            <th>Auth</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -40,17 +39,16 @@ import { formatApiError } from '../utils/error.utils';
           <tr *ngFor="let server of servers">
             <td>{{ server.name }}</td>
             <td>{{ server.baseUrl }}</td>
-            <td>{{ server.authenticationType || '-' }}</td>
             <td>
               <a routerLink="/attacks" [queryParams]="{serverId: server.id}" class="btn-link">Run Test</a>
               <button (click)="onDelete(server.id)">Delete</button>
             </td>
           </tr>
           <tr *ngIf="!loading && servers.length === 0">
-            <td colspan="5">No servers yet. Add one above.</td>
+            <td colspan="3">No servers yet. Add one above.</td>
           </tr>
           <tr *ngIf="loading">
-            <td colspan="5" class="loading">Loading servers...</td>
+            <td colspan="3" class="loading">Loading servers...</td>
           </tr>
         </tbody>
       </table>
@@ -75,7 +73,7 @@ import { formatApiError } from '../utils/error.utils';
 })
 export class ServerManagementComponent implements OnInit {
   servers: FhirServer[] = [];
-  form: AddServerRequest = { name: '', baseUrl: '', authenticationType: '' };
+  form: AddServerRequest = { name: '', baseUrl: '' };
   errorMessage = '';
   successMessage = '';
   loading = false;
@@ -112,7 +110,7 @@ export class ServerManagementComponent implements OnInit {
     this.serverService.addServer(this.form).subscribe({
       next: () => {
         this.successMessage = 'Server added successfully';
-        this.form = { name: '', baseUrl: '', authenticationType: '' };
+        this.form = { name: '', baseUrl: '' };
         this.loadServers();
       },
       error: (err) => {

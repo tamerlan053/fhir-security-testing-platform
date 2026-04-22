@@ -7,7 +7,7 @@
 | **`ExecutableAttack` + `AttackResult`** | Each auth scenario stays a single pluggable attack; register new classes as `@Component` beans. |
 | **`AttackRegistry` + `AttackExecutorService`** | No new orchestration endpoints; runs are still `POST /api/attacks/run/{serverId}` and results `GET /api/results/{testRunId}`. |
 | **`AttackHttpClient`** | `get` / `post` / `put` with optional `HttpHeaders` (Week 6+). Week 7 adds **`postUrlEncoded`** for OAuth `token_endpoint` probes (`application/x-www-form-urlencoded`). |
-| **`FhirServer`** | Has `authenticationType` (string) for classification in UI/report; **it does not store secrets today**. For Basic Auth / Bearer tests you will either: (a) add optional encrypted fields (`basicUser`, `basicPassword`, `bearerToken`, etc.), (b) read test credentials from `application.properties` / env for known lab servers only, or (c) run token-misuse tests with **syntactically valid but wrong** tokens without server-specific secrets. Document the chosen approach in the report. |
+| **`FhirServer`** | Stores name and base URL only; **no secrets**. For Basic Auth / Bearer tests you will either: (a) add optional encrypted fields (`basicUser`, `basicPassword`, `bearerToken`, etc.), (b) read test credentials from `application.properties` / env for known lab servers only, or (c) run token-misuse tests with **syntactically valid but wrong** tokens without server-specific secrets. Document the chosen approach in the report. |
 | **`attack-runner.ts`** | Same pattern as Week 6: add a `authScenarioNames` array (like `accessControlScenarioNames`) and a third summary line: *“X of Y auth-related attacks …”* |
 
 ---

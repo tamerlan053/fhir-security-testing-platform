@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 import java.util.Optional;
 
 /**
- * Discovers SMART / OAuth hints from well-known and CapabilityStatement JSON (Week 7).
+ * Discovers SMART / OAuth hints from well-known and CapabilityStatement JSON.
  */
 @Component
 public class AuthEndpointSupport {

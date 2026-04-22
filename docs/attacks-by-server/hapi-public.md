@@ -4,9 +4,9 @@
 |------|----------|
 | **Server** | HAPI Public |
 | **Base URL** | `http://hapi.fhir.org/baseR4` |
-| **Database test run ID** | `test_run_id = 31` |
-| **Summary metrics source** | `reports/analysis-runs-31-34-summary.tsv` |
-| **Response bodies below** | As stored in PostgreSQL, column `test_result.response_body` (run 31) |
+| **Database test run ID** | `test_run_id = 5` |
+| **Run startedAt** | `2026-04-22T10:32:47.503153` |
+| **Response bodies below** | As stored in PostgreSQL, column `test_result.response_body` (run 5) |
 
 ## Classification legend
 
@@ -22,15 +22,15 @@
 
 ---
 
-## Summary table: all scenarios (run 31)
+## Summary table: all scenarios (run 5)
 
 | # | Scenario | HTTP | Classification | Vulnerable (legacy) | Severity |
 |---|----------|------|---------------|---------------------|-------------|
 | 1 | Malformed JSON Request | 400 | SECURE | no | INFO |
 | 2 | Metadata Manipulation | 412 | SECURE | no | INFO |
 | 3 | Unexpected Payload Injection | 412 | SECURE | no | INFO |
-| 4 | Extension Fields Misuse | 412 | SECURE | no | INFO |
-| 5 | Contained Resource Smuggling | 412 | SECURE | no | INFO |
+| 4 | Extension Fields Misuse | 201 | VULNERABLE | yes | MEDIUM |
+| 5 | Contained Resource Smuggling | 201 | VULNERABLE | yes | MEDIUM |
 | 6 | Encoded Hidden Data | 412 | SECURE | no | INFO |
 | 7 | Invalid Credentials Access Test | 200 | VULNERABLE | yes | HIGH |
 | 8 | Open Endpoint Detection | 200 | MISCONFIGURED | no | MEDIUM |
@@ -41,13 +41,15 @@
 
 ## Per-scenario detail
 
-For **each** scenario below: what the test does (backend implementation), what was observed on HAPI Public, and a short interpretation.
+For **each** scenario below: what the test does (backend implementation), what was observed on the server, and a short interpretation.
 
-### 1. Malformed JSON Request (`MalformedJsonRequestAttack`, order 10)
+### 1. Malformed JSON Request
 
-**Procedure:** two POSTs to `{base}/Patient`: (a) truncated JSON `{ "resourceType": "Patient", `; (b) JSON with a trailing comma `{ "resourceType": "Patient", }`. Validation POST classification: success **200/201** → VULNERABLE; **400, 404, 405, 412, 422** → SECURE.
+**Procedure:** two POSTs to `http://hapi.fhir.org/baseR4/Patient`: (a) truncated JSON `{ "resourceType": "Patient", `; (b) JSON with a trailing comma `{ "resourceType": "Patient", }`. Behavioral classification: **VULNERABLE** only if malformed JSON leads to a **retrievable created Patient** (POST→GET verification); `400/412/422/...` rejection → **SECURE**.
 
-**Result (31):** HTTP **400**, **SECURE**.
+**Result (5):** HTTP **400**, **SECURE**.
+
+**Reason:** Truncated JSON: server rejected malformed JSON as expected. | Also: SECURE — Trailing comma JSON: server rejected malformed JSON as expected.
 
 **Response body** (`test_result.response_body`):
 
@@ -79,15 +81,17 @@ For **each** scenario below: what the test does (backend implementation), what w
 }
 ```
 
-**Interpretation:** the server rejects syntactically invalid bodies — expected behavior.
+**Interpretation:** Truncated JSON: server rejected malformed JSON as expected. | Also: SECURE — Trailing comma JSON: server rejected malformed JSON as expected.
 
 ---
 
-### 2. Metadata Manipulation (`MetadataManipulationAttack`, order 20)
+### 2. Metadata Manipulation
 
-**Procedure:** three POSTs to `/Patient`: wrong `meta.versionId` type (number instead of string); `resourceType: "FakeResource"`; identifier with a null byte and a suspicious `identifier`. Outcome is the worst of the three (`combineWorstAll`).
+**Procedure:** three POSTs to `/Patient`: wrong `meta.versionId` type (number instead of string); `resourceType: "FakeResource"`; and a client-supplied `id` containing a null-byte marker. Behavioral classification: **VULNERABLE** only if a suspicious value is **echoed/persisted** (e.g., null-byte marker survives) or incorrect resourceType is accepted; sanitized/ignored fields with successful create can still be **SECURE**.
 
-**Result (31):** HTTP **412**, **SECURE**.
+**Result (5):** HTTP **412**, **SECURE**.
+
+**Reason:** Server rejected invalid meta.versionId type as expected. | Also: SECURE — Server rejected invalid resourceType as expected. | Also: SECURE — Server rejected suspicious client-supplied id as expected.
 
 **Response body** (`test_result.response_body`):
 
@@ -132,15 +136,17 @@ For **each** scenario below: what the test does (backend implementation), what w
 }
 ```
 
-**Interpretation:** incorrect/suspicious metadata does not lead to successful resource creation.
+**Interpretation:** Server rejected invalid meta.versionId type as expected. | Also: SECURE — Server rejected invalid resourceType as expected. | Also: SECURE — Server rejected suspicious client-supplied id as expected.
 
 ---
 
-### 3. Unexpected Payload Injection (`UnexpectedPayloadInjectionAttack`, order 30)
+### 3. Unexpected Payload Injection
 
-**Procedure:** three POSTs to `/Patient`: unknown field and `__proto__`; duplicate `id` key; nested extra fields. Classification same as validation POST.
+**Procedure:** three POSTs to `/Patient`: (1) unknown field + `__proto__` marker; (2) duplicate JSON key for `id`; (3) `_payload` + nested object marker. Behavioral classification: **VULNERABLE** only if injected markers **persist and are retrievable** on follow-up GET.
 
-**Result (31):** HTTP **412**, **SECURE**.
+**Result (5):** HTTP **412**, **SECURE**.
+
+**Reason:** unknownField/__proto__ injection: server rejected the payload. | Also: SECURE — Duplicate key: server rejected ambiguous JSON as expected. | Also: SECURE — _payload/extraNested injection: server rejected the payload.
 
 **Response body** (`test_result.response_body`):
 
@@ -185,69 +191,141 @@ For **each** scenario below: what the test does (backend implementation), what w
 }
 ```
 
-**Interpretation:** extended/anomalous JSON is not accepted as valid Patient creation.
+**Interpretation:** unknownField/__proto__ injection: server rejected the payload. | Also: SECURE — Duplicate key: server rejected ambiguous JSON as expected. | Also: SECURE — _payload/extraNested injection: server rejected the payload.
 
 ---
 
-### 4. Extension Fields Misuse (`ExtensionFieldsMisuseAttack`, order 40)
+### 4. Extension Fields Misuse
 
-**Procedure:** one POST to `/Patient` with a custom `extension` (URL `http://malicious.example/hidden`, `valueString: covert-payload`).
+**Procedure:** POST `/Patient` with a custom `extension` that contains a unique marker, then GET `/Patient/{id}`. **VULNERABLE** only if the extension marker persists and is retrievable (covert storage channel).
 
-**Result (31):** HTTP **412**, **SECURE**.
+**Result (5):** HTTP **201**, **VULNERABLE**.
+
+**Reason:** Custom extension marker persisted and is retrievable (potential covert storage channel).
 
 **Response body** (`test_result.response_body`):
 
 ```text
+POST /Patient (HTTP 201):
 {
-  "resourceType": "OperationOutcome",
+  "resourceType": "Patient",
+  "id": "131945812",
+  "meta": {
+    "versionId": "1",
+    "lastUpdated": "2026-04-22T08:32:55.706+00:00",
+    "source": "#OPVZkBE9hPzuAb0C"
+  },
   "text": {
     "status": "generated",
-    "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><h1>Operation Outcome</h1><table border=\"0\"><tr><td style=\"font-weight: bold;\">ERROR</td><td>[]</td><td>HAPI-2840: Can not create resource duplicating existing resource: Patient/131944401</td></tr></table></div>"
+    "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><div class=\"hapiHeaderText\"><b>PROBE-COVERT-EXT-33E7DA0D23F4 </b></div><table class=\"hapiPropertyTable\"><tbody/></table></div>"
   },
-  "issue": [ {
-    "severity": "error",
-    "code": "processing",
-    "diagnostics": "HAPI-2840: Can not create resource duplicating existing resource: Patient/131944401"
+  "extension": [ {
+    "url": "http://malicious.example/hidden",
+    "valueString": "covert-ext-33e7da0d23f4"
+  } ],
+  "name": [ {
+    "family": "Probe-covert-ext-33e7da0d23f4"
+  } ]
+}
+
+GET /Patient/{id} (HTTP 200):
+{
+  "resourceType": "Patient",
+  "id": "131945812",
+  "meta": {
+    "versionId": "1",
+    "lastUpdated": "2026-04-22T08:32:55.706+00:00",
+    "source": "#OPVZkBE9hPzuAb0C"
+  },
+  "text": {
+    "status": "generated",
+    "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><div class=\"hapiHeaderText\"><b>PROBE-COVERT-EXT-33E7DA0D23F4 </b></div><table class=\"hapiPropertyTable\"><tbody/></table></div>"
+  },
+  "extension": [ {
+    "url": "http://malicious.example/hidden",
+    "valueString": "covert-ext-33e7da0d23f4"
+  } ],
+  "name": [ {
+    "family": "Probe-covert-ext-33e7da0d23f4"
   } ]
 }
 ```
 
-**Interpretation:** the extension payload is not persisted with a successful **201** — validation boundaries hold.
+**Interpretation:** Custom extension marker persisted and is retrievable (potential covert storage channel).
 
 ---
 
-### 5. Contained Resource Smuggling (`ContainedResourceSmugglingAttack`, order 50)
+### 5. Contained Resource Smuggling
 
-**Procedure:** POST `/Patient` with `contained[]`: nested `Binary` with base64 `c2VjcmV0LWRhdGE=`.
+**Procedure:** POST `/Patient` with contained `Binary.data` (base64 marker), then GET `/Patient/{id}`. **VULNERABLE** only if the contained Binary marker persists and is retrievable.
 
-**Result (31):** HTTP **412**, **SECURE**.
+**Result (5):** HTTP **201**, **VULNERABLE**.
+
+**Reason:** Contained Binary marker persisted and is retrievable (potential nested payload smuggling channel).
 
 **Response body** (`test_result.response_body`):
 
 ```text
+POST /Patient (HTTP 201):
 {
-  "resourceType": "OperationOutcome",
+  "resourceType": "Patient",
+  "id": "131945813",
+  "meta": {
+    "versionId": "1",
+    "lastUpdated": "2026-04-22T08:32:57.705+00:00",
+    "source": "#tEHUDQGNfwXoFJNN"
+  },
   "text": {
     "status": "generated",
-    "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><h1>Operation Outcome</h1><table border=\"0\"><tr><td style=\"font-weight: bold;\">ERROR</td><td>[]</td><td>HAPI-2840: Can not create resource duplicating existing resource: Patient/131944399</td></tr></table></div>"
+    "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><div class=\"hapiHeaderText\"><b>PROBE-COVERT-BIN-56EE82E79B0A </b></div><table class=\"hapiPropertyTable\"><tbody/></table></div>"
   },
-  "issue": [ {
-    "severity": "error",
-    "code": "processing",
-    "diagnostics": "HAPI-2840: Can not create resource duplicating existing resource: Patient/131944399"
+  "contained": [ {
+    "resourceType": "Binary",
+    "id": "covert",
+    "contentType": "text/plain",
+    "data": "Y292ZXJ0LWJpbi01NmVlODJlNzliMGE="
+  } ],
+  "name": [ {
+    "family": "Probe-covert-bin-56ee82e79b0a"
+  } ]
+}
+
+GET /Patient/{id} (HTTP 200):
+{
+  "resourceType": "Patient",
+  "id": "131945813",
+  "meta": {
+    "versionId": "1",
+    "lastUpdated": "2026-04-22T08:32:57.705+00:00",
+    "source": "#tEHUDQGNfwXoFJNN"
+  },
+  "text": {
+    "status": "generated",
+    "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><div class=\"hapiHeaderText\"><b>PROBE-COVERT-BIN-56EE82E79B0A </b></div><table class=\"hapiPropertyTable\"><tbody/></table></div>"
+  },
+  "contained": [ {
+    "resourceType": "Binary",
+    "id": "covert",
+    "contentType": "text/plain",
+    "data": "Y292ZXJ0LWJpbi01NmVlODJlNzliMGE="
+  } ],
+  "name": [ {
+    "family": "Probe-covert-bin-56ee82e79b0a"
   } ]
 }
 ```
 
-**Interpretation:** the nested contained resource does not pass as an allowed create operation (or is rejected by server policy).
+**Interpretation:** Contained Binary marker persisted and is retrievable (potential nested payload smuggling channel).
 
 ---
 
-### 6. Encoded Hidden Data (`EncodedHiddenDataAttack`, order 60)
+### 6. Encoded Hidden Data
 
-**Procedure:** POST `/Patient` with `meta.tag` where `display` uses Unicode escapes (`\u0053\u0065...` → "Secret").
+**Procedure:** POST `/Patient` with `meta.tag.display` carrying a unicode-escaped marker, then GET `/Patient/{id}`. **VULNERABLE** only if the marker persists and is retrievable (normalization/stripping counts as **SECURE**).
 
-**Result (31):** HTTP **412**, **SECURE**.
+**Result (5):** HTTP **412**, **SECURE**.
+
+**Reason:** Server rejected the payload (no encoded marker persistence).
 
 **Response body** (`test_result.response_body`):
 
@@ -266,15 +344,17 @@ For **each** scenario below: what the test does (backend implementation), what w
 }
 ```
 
-**Interpretation:** JSON-encoded tags do not lead to immediate acceptance of the test Patient.
+**Interpretation:** Server rejected the payload (no encoded marker persistence).
 
 ---
 
-### 7. Invalid Credentials Access Test (`InvalidCredentialsAccessAttack`, order 70)
+### 7. Invalid Credentials Access Test
 
-**Procedure:** composite scenario: (1) resolve `token_endpoint` via `/.well-known/smart-configuration` and `/metadata`; if a URL exists — POST `client_credentials` with an invalid client; (2) GET `/Patient?_count=1` with **Invalid Basic** header; (3–4) GET with forged/malformed Bearer on `/Patient` and `/Observation`; variants include empty Bearer, non-JWT, expired-shaped token. Final outcome combines the "worst" results.
+**Procedure:** composite scenario: (1) resolve `token_endpoint` via `/.well-known/smart-configuration` and `/metadata`; if a URL exists — POST `client_credentials` with an invalid client; (2) GET `/Patient?_count=1` with invalid Basic; (3) GET with forged/malformed Bearer on `/Patient` and `/Observation` (variants include empty Bearer, non-JWT, expired-shaped token). Final outcome combines the worst results.
 
-**Result (31):** HTTP **200**, **VULNERABLE**, severity **HIGH**.
+**Result (5):** HTTP **200**, **VULNERABLE**.
+
+**Reason:** Read succeeded with invalid/forged credentials while OAuth/SMART is advertised in metadata. | Also: INCONCLUSIVE — OAuth token URL not available; sub-probe skipped. | Also: VULNERABLE — Read succeeded with invalid/forged credentials while OAuth/SMART is advertised in metadata. | Also: VULNERABLE — Read succeeded with invalid/forged credentials while OAuth/SMART is advertised in metadata. | Also: VULNERABLE — Read succeeded with invalid/forged credentials while OAuth/SMART is advertised in metadata. | Also: VULNERABLE — Read succeeded with invalid/forged credentials while OAuth/SMART is advertised in metadata. | Also: VULNERABLE — Read succeeded with invalid/forged credentials while OAuth/SMART is advertised in metadata.
 
 **Response body** (`test_result.response_body`):
 
@@ -283,9 +363,9 @@ No token_endpoint discovered.
 ---
 {
   "resourceType": "Bundle",
-  "id": "b2eed631-c81e-4184-b9bf-0c75202d8dbe",
+  "id": "3a99e1b2-a56c-4c08-91a6-9c6fba26e50f",
   "meta": {
-    "lastUpdated": "2026-04-21T08:54:14.274+00:00"
+    "lastUpdated": "2026-04-22T08:33:01.673+00:00"
   },
   "type": "searchset",
   "link": [ {
@@ -293,7 +373,7 @@ No token_endpoint discovered.
     "url": "https://hapi.fhir.org/baseR4/Patient?_count=1"
   }, {
     "relation": "next",
-    "url": "https://hapi.fhir.org/baseR4?_getpages=b2eed631-c81e-4184-b9bf-0c75202d8dbe&_getpagesoffset=1&_count=1&_pretty=true&_bundletype=searchset"
+    "url": "https://hapi.fhir.org/baseR4?_getpages=3a99e1b2-a56c-4c08-91a6-9c6fba26e50f&_getpagesoffset=1&_count=1&_pretty=true&_bundletype=searchset"
   } ],
   "entry": [ {
     "fullUrl": "https://hapi.fhir.org/baseR4/Patient/90270587",
@@ -327,24 +407,26 @@ Bearer probes Patient 200 | Observation 200
 Bearer variant → HTTP 200; Bearer variant → HTTP 200; Bearer variant → HTTP 200; 
 ```
 
-**Interpretation:** when OAuth/SMART is advertised in metadata, reads with invalid credentials are not blocked with **401/403** — a mismatch between advertised authentication and actual behavior.
+**Interpretation:** Read succeeded with invalid/forged credentials while OAuth/SMART is advertised in metadata. | Also: INCONCLUSIVE — OAuth token URL not available; sub-probe skipped. | Also: VULNERABLE — Read succeeded with invalid/forged credentials while OAuth/SMART is advertised in metadata. | Also: VULNERABLE — Read succeeded with invalid/forged credentials while OAuth/SMART is advertised in metadata. | Also: VULNERABLE — Read succeeded with invalid/forged credentials while OAuth/SMART is advertised in metadata. | Also: VULNERABLE — Read succeeded with invalid/forged credentials while OAuth/SMART is advertised in metadata. | Also: VULNERABLE — Read succeeded with invalid/forged credentials while OAuth/SMART is advertised in metadata.
 
 ---
 
-### 8. Open Endpoint Detection (`OpenEndpointDetectionAttack`, order 80)
+### 8. Open Endpoint Detection
 
-**Procedure:** GET `/.well-known/smart-configuration`, GET `/metadata` (check whether OAuth is advertised); then unauthenticated GET `/Patient?_count=1`. If OAuth is advertised but Patient can be read without authorization → **MISCONFIGURED**.
+**Procedure:** GET `/.well-known/smart-configuration` and GET `/metadata` to infer whether OAuth/SMART is advertised; then unauthenticated GET `/Patient?_count=1`. If OAuth is advertised but Patient can be read without authorization → **MISCONFIGURED**; if not advertised and read succeeds → **OPEN_POLICY**.
 
-**Result (31):** HTTP **200**, **MISCONFIGURED**, **MEDIUM**.
+**Result (5):** HTTP **200**, **MISCONFIGURED**.
+
+**Reason:** OAuth/SMART is advertised but unauthenticated Patient read succeeded (policy inconsistency).
 
 **Response body** (`test_result.response_body`):
 
 ```text
 well-known HTTP 404, metadata HTTP 200; GET /Patient?_count=1 → HTTP 200. Sample: {
   "resourceType": "Bundle",
-  "id": "b2eed631-c81e-4184-b9bf-0c75202d8dbe",
+  "id": "3a99e1b2-a56c-4c08-91a6-9c6fba26e50f",
   "meta": {
-    "lastUpdated": "2026-04-21T08:54:14.274+00:00"
+    "lastUpdated": "2026-04-22T08:33:01.673+00:00"
   },
   "type": "searchset",
   "link": [ {
@@ -352,7 +434,7 @@ well-known HTTP 404, metadata HTTP 200; GET /Patient?_count=1 → HTTP 200. Samp
     "url": "https://hapi.fhir.org/baseR4/Patient?_count=1"
   }, {
     "relation": "next",
-    "url": "https://hapi.fhir.org/baseR4?_getpages=b2eed631-c81e-4184-b9bf-0c75202d8dbe&_getpagesoffset=1&_count=1&_pretty=true&_bundletype=searchset"
+    "url": "https://hapi.fhir.org/baseR4?_getpages=3a99e1b2-a56c-4c08-91a6-9c6fba26e50f&_getpagesoffset=1&_count=1&_pretty=true&_bundletype=searchset"
   } ],
   "entry": [ {
     "fullUrl": "https://hapi.fhir.org/baseR4/Patient/90270587",
@@ -376,15 +458,17 @@ well-known HTTP 404, metadata HTTP 200; GET /Patient?_count=1 → HTTP 200. Samp
       "birthDate": "1980-01-…
 ```
 
-**Interpretation:** mismatch between advertised security mechanisms and the ability to read Patient anonymously.
+**Interpretation:** OAuth/SMART is advertised but unauthenticated Patient read succeeded (policy inconsistency).
 
 ---
 
-### 9. Cross-Patient Access (`CrossPatientAccessAttack`, order 90)
+### 9. Cross-Patient Access
 
-**Procedure:** a victim Patient is created, then without authorization: GET `/Patient/{victimId}` and Observation search with `subject=Patient/{victimId}`. On **200** with advertised OAuth → **VULNERABLE**; without OAuth — **OPEN_POLICY**.
+**Procedure:** create a victim Patient, then without authorization: GET `/Patient/{victimId}` and GET `Observation?subject=Patient/{victimId}`. If reads succeed while OAuth/SMART is advertised → **VULNERABLE**; if no OAuth is advertised → **OPEN_POLICY**.
 
-**Result (31):** HTTP **200**, **VULNERABLE**, **HIGH**.
+**Result (5):** HTTP **200**, **VULNERABLE**.
+
+**Reason:** Read of another patient resource succeeded while OAuth/SMART is advertised (possible broken object-level authorization). | Also: VULNERABLE — Read of another patient resource succeeded while OAuth/SMART is advertised (possible broken object-level authorization).
 
 **Response body** (`test_result.response_body`):
 
@@ -392,45 +476,86 @@ well-known HTTP 404, metadata HTTP 200; GET /Patient?_count=1 → HTTP 200. Samp
 GET Patient → HTTP 200 | GET Observation?subject → HTTP 200
 ```
 
-**Interpretation:** cross-patient read by direct id and via Observation is possible where OAuth is considered available in the environment — API-level IDOR-style risk.
+**Interpretation:** Read of another patient resource succeeded while OAuth/SMART is advertised (possible broken object-level authorization). | Also: VULNERABLE — Read of another patient resource succeeded while OAuth/SMART is advertised (possible broken object-level authorization).
 
 ---
 
-### 10. Unauthorized Write / ID Tampering (`UnauthorizedWriteIdTamperingAttack`, order 100)
+### 10. Unauthorized Write / ID Tampering
 
-**Procedure:** (1) PUT `/Patient/{id}` tampering names on an existing resource; (2) POST Observation for subject + follow-up GET Observation. On **200/201** success with advertised OAuth → **CRITICAL VULNERABLE**.
+**Procedure:** (1) PUT `/Patient/{id}` tampering with before/after GET verification; (2) POST `/Observation` for a victim subject plus follow-up GET `/Observation/{id}`. If write succeeds while OAuth/SMART is advertised and tampering persists → **CRITICAL VULNERABLE**.
 
-**Result (31):** HTTP **200**, **VULNERABLE**, **CRITICAL**.
+**Result (5):** HTTP **200**, **VULNERABLE**.
+
+**Reason:** Write succeeded without valid credentials while OAuth/SMART is advertised. Verified persistence of tampered marker in follow-up GET. | Also: VULNERABLE — Write succeeded without valid credentials while OAuth/SMART is advertised. Follow-up GET HTTP 200.
 
 **Response body** (`test_result.response_body`):
 
 ```text
+GET /Patient/{id} before PUT (HTTP 200):
 {
   "resourceType": "Patient",
-  "id": "131944444",
+  "id": "131945818",
   "meta": {
-    "versionId": "2",
-    "lastUpdated": "2026-04-21T08:54:27.633+00:00",
-    "source": "#i439fl4z6KcTcZCm"
+    "versionId": "1",
+    "lastUpdated": "2026-04-22T08:33:14.625+00:00",
+    "source": "#OiUdWAnZXBOzssV8"
   },
   "text": {
     "status": "generated",
-    "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><div class=\"hapiHeaderText\">Tampered-de30d1405e80 <b>TAMPEREDFAMILY-DE30D1405E80 </b></div><table class=\"hapiPropertyTable\"><tbody/></table></div>"
+    "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><div class=\"hapiHeaderText\">Victim-67049fb83ba0 <b>PATIENTVICTIM-67049FB83BA0 </b></div><table class=\"hapiPropertyTable\"><tbody/></table></div>"
   },
   "name": [ {
-    "family": "TamperedFamily-de30d1405e80",
-    "given": [ "Tampered-de30d1405e80" ]
+    "family": "PatientVictim-67049fb83ba0",
+    "given": [ "Victim-67049fb83ba0" ]
+  } ]
+}
+
+PUT /Patient/{id} (HTTP 200):
+{
+  "resourceType": "Patient",
+  "id": "131945818",
+  "meta": {
+    "versionId": "2",
+    "lastUpdated": "2026-04-22T08:33:16.624+00:00",
+    "source": "#BDbEv3vlvlq1n5YF"
+  },
+  "text": {
+    "status": "generated",
+    "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><div class=\"hapiHeaderText\">Tampered-4cc4eb236cf5 <b>TAMPEREDFAMILY-4CC4EB236CF5 </b></div><table class=\"hapiPropertyTable\"><tbody/></table></div>"
+  },
+  "name": [ {
+    "family": "TamperedFamily-4cc4eb236cf5",
+    "given": [ "Tampered-4cc4eb236cf5" ]
+  } ]
+}
+
+GET /Patient/{id} after PUT (HTTP 200):
+{
+  "resourceType": "Patient",
+  "id": "131945818",
+  "meta": {
+    "versionId": "2",
+    "lastUpdated": "2026-04-22T08:33:16.624+00:00",
+    "source": "#BDbEv3vlvlq1n5YF"
+  },
+  "text": {
+    "status": "generated",
+    "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><div class=\"hapiHeaderText\">Tampered-4cc4eb236cf5 <b>TAMPEREDFAMILY-4CC4EB236CF5 </b></div><table class=\"hapiPropertyTable\"><tbody/></table></div>"
+  },
+  "name": [ {
+    "family": "TamperedFamily-4cc4eb236cf5",
+    "given": [ "Tampered-4cc4eb236cf5" ]
   } ]
 }
 
 POST /Observation:
 {
   "resourceType": "Observation",
-  "id": "131944446",
+  "id": "131945820",
   "meta": {
     "versionId": "1",
-    "lastUpdated": "2026-04-21T08:54:29.632+00:00",
-    "source": "#lAyFxcH9MKsOC6dq"
+    "lastUpdated": "2026-04-22T08:33:19.776+00:00",
+    "source": "#mMKZw7CNyXyCJ5kx"
   },
   "status": "final",
   "code": {
@@ -441,19 +566,19 @@ POST /Observation:
     "text": "SecurityTest"
   },
   "subject": {
-    "reference": "Patient/131944445"
+    "reference": "Patient/131945819"
   },
-  "valueString": "OwnerRefProbe-6f4071083e24"
+  "valueString": "OwnerRefProbe-f9c78b7147c5"
 }
 
 GET /Observation/{id}:
 {
   "resourceType": "Observation",
-  "id": "131944446",
+  "id": "131945820",
   "meta": {
     "versionId": "1",
-    "lastUpdated": "2026-04-21T08:54:29.632+00:00",
-    "source": "#lAyFxcH9MKsOC6dq"
+    "lastUpdated": "2026-04-22T08:33:19.776+00:00",
+    "source": "#mMKZw7CNyXyCJ5kx"
   },
   "status": "final",
   "code": {
@@ -464,16 +589,12 @@ GET /Observation/{id}:
     "text": "SecurityTest"
   },
   "subject": {
-    "reference": "Patient/131944445"
+    "reference": "Patient/131945819"
   },
-  "valueString": "OwnerRefProbe-6f4071083e24"
+  "valueString": "OwnerRefProbe-f9c78b7147c5"
 }
 ```
 
-**Interpretation:** anonymous or insufficiently authorized data modification and related records are confirmed — highest priority among write scenarios.
+**Interpretation:** Write succeeded without valid credentials while OAuth/SMART is advertised. Verified persistence of tampered marker in follow-up GET. | Also: VULNERABLE — Write succeeded without valid credentials while OAuth/SMART is advertised. Follow-up GET HTTP 200.
 
 ---
-
-## Overall conclusion for this server
-
-HAPI Public shows **hard rejection** (**412** / **400**) on most validation and covert-channel POST checks — a **positive signal** for the parsing/rules layer. At the same time, **authentication, open read with advertised OAuth, cross-patient read, and write** scenarios are marked **VULNERABLE** or **MISCONFIGURED**, reflecting public demo policy rather than production configuration with strict RBAC/ABAC.

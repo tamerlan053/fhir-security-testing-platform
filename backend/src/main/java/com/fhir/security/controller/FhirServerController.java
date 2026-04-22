@@ -29,11 +29,7 @@ public class FhirServerController {
     @PostMapping
     public ResponseEntity<FhirServerResponse> addServer(@Valid @RequestBody AddServerRequest request) {
         log.info("POST /api/servers - adding server: {}", request.name());
-        FhirServer server = new FhirServer(
-                request.name(),
-                request.baseUrl(),
-                request.authenticationType()
-        );
+        FhirServer server = new FhirServer(request.name(), request.baseUrl());
         FhirServer saved = fhirServerService.addServer(server);
         return ResponseEntity.status(HttpStatus.CREATED).body(FhirServerMapper.toResponse(saved));
     }

@@ -28,7 +28,7 @@ public class OpenEndpointDetectionAttack implements ExecutableAttack {
 
     @Override
     public String getDescription() {
-        return "Compares advertised SMART/OAuth with unauthenticated GET /Patient (Week 7)";
+        return "Compares advertised SMART/OAuth with unauthenticated GET /Patient";
     }
 
     @Override

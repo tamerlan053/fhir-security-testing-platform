@@ -9,8 +9,7 @@ public class FhirServerMapper {
         return new FhirServerResponse(
                 server.getId(),
                 server.getName(),
-                server.getBaseUrl(),
-                server.getAuthenticationType()
+                server.getBaseUrl()
         );
     }
 }

@@ -20,7 +20,7 @@
 
 | Entity | Table | Purpose |
 |--------|-------|---------|
-| `FhirServer` | `fhir_server` | FHIR server configurations (name, baseUrl, authenticationType) |
+| `FhirServer` | `fhir_server` | FHIR server configurations (name, baseUrl) |
 | `AttackScenario` | `attack_scenario` | Attack metadata (name, description, severity) |
 | `TestRun` | `test_run` | Single test execution against a server |
 | `TestResult` | `test_result` | Result of one attack scenario in a run |

