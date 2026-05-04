@@ -59,29 +59,114 @@ import { formatApiError } from '../utils/error.utils';
           {{ getAccessControlVulnerableCount() }} of {{ getAccessControlResultCount() }} authorization / write scenarios
           <strong>VULNERABLE</strong>
         </p>
-        <table class="results-table">
-          <thead>
-            <tr>
-              <th>Attack</th>
-              <th>Status</th>
-              <th>Classification &amp; explanation</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let r of currentRun.results" [ngClass]="resultRowClass(r)">
-              <td>{{ r.scenarioName }}</td>
-              <td class="mono">{{ r.statusCode }}</td>
-              <td class="classification-cell">
-                <span class="badge" [ngClass]="badgeClass(r)">{{ r.classification }}</span>
-                <span class="sev" *ngIf="r.severity">{{ r.severity }}</span>
-                <div class="reason" [title]="r.reason">{{ truncateReason(r.reason) }}</div>
-              </td>
-            </tr>
-            <tr *ngIf="currentRun.results.length === 0">
-              <td colspan="3">No results yet.</td>
-            </tr>
-          </tbody>
-        </table>
+
+        <div class="group">
+          <h4 class="group-title">Validation / injection scenarios</h4>
+          <table class="results-table">
+            <thead>
+              <tr>
+                <th>Attack</th>
+                <th>Status</th>
+                <th>Classification &amp; explanation</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let r of getGroupResults('validation')" [ngClass]="resultRowClass(r)">
+                <td>{{ r.scenarioName }}</td>
+                <td class="mono">{{ r.statusCode }}</td>
+                <td class="classification-cell">
+                  <span class="badge" [ngClass]="badgeClass(r)">{{ r.classification }}</span>
+                  <span class="sev" *ngIf="r.severity">{{ r.severity }}</span>
+                  <div class="reason" [title]="r.reason">{{ truncateReason(r.reason) }}</div>
+                </td>
+              </tr>
+              <tr *ngIf="getGroupResults('validation').length === 0">
+                <td colspan="3">No results in this group.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="group">
+          <h4 class="group-title">Covert-channel scenarios</h4>
+          <table class="results-table">
+            <thead>
+              <tr>
+                <th>Attack</th>
+                <th>Status</th>
+                <th>Classification &amp; explanation</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let r of getGroupResults('covert')" [ngClass]="resultRowClass(r)">
+                <td>{{ r.scenarioName }}</td>
+                <td class="mono">{{ r.statusCode }}</td>
+                <td class="classification-cell">
+                  <span class="badge" [ngClass]="badgeClass(r)">{{ r.classification }}</span>
+                  <span class="sev" *ngIf="r.severity">{{ r.severity }}</span>
+                  <div class="reason" [title]="r.reason">{{ truncateReason(r.reason) }}</div>
+                </td>
+              </tr>
+              <tr *ngIf="getGroupResults('covert').length === 0">
+                <td colspan="3">No results in this group.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="group">
+          <h4 class="group-title">Authentication scenarios</h4>
+          <table class="results-table">
+            <thead>
+              <tr>
+                <th>Attack</th>
+                <th>Status</th>
+                <th>Classification &amp; explanation</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let r of getGroupResults('auth')" [ngClass]="resultRowClass(r)">
+                <td>{{ r.scenarioName }}</td>
+                <td class="mono">{{ r.statusCode }}</td>
+                <td class="classification-cell">
+                  <span class="badge" [ngClass]="badgeClass(r)">{{ r.classification }}</span>
+                  <span class="sev" *ngIf="r.severity">{{ r.severity }}</span>
+                  <div class="reason" [title]="r.reason">{{ truncateReason(r.reason) }}</div>
+                </td>
+              </tr>
+              <tr *ngIf="getGroupResults('auth').length === 0">
+                <td colspan="3">No results in this group.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="group">
+          <h4 class="group-title">Authorization / write scenarios</h4>
+          <table class="results-table">
+            <thead>
+              <tr>
+                <th>Attack</th>
+                <th>Status</th>
+                <th>Classification &amp; explanation</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let r of getGroupResults('access')" [ngClass]="resultRowClass(r)">
+                <td>{{ r.scenarioName }}</td>
+                <td class="mono">{{ r.statusCode }}</td>
+                <td class="classification-cell">
+                  <span class="badge" [ngClass]="badgeClass(r)">{{ r.classification }}</span>
+                  <span class="sev" *ngIf="r.severity">{{ r.severity }}</span>
+                  <div class="reason" [title]="r.reason">{{ truncateReason(r.reason) }}</div>
+                </td>
+              </tr>
+              <tr *ngIf="getGroupResults('access').length === 0">
+                <td colspan="3">No results in this group.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div class="runs-section" *ngIf="previousRuns.length > 0">
@@ -134,6 +219,8 @@ import { formatApiError } from '../utils/error.utils';
     .row-open-policy { background: #f3f9ff; border-left: 4px solid #1565c0; }
     .row-inconclusive { background: #fafafa; border-left: 4px solid #9e9e9e; }
     .row-secure { background: #f4fbf4; border-left: 4px solid #2e7d32; }
+    .group { margin-top: 18px; }
+    .group-title { margin: 0 0 6px; font-size: 1.02rem; color: #333; }
     .runs-section { margin-top: 24px; }
     .runs-list { list-style: none; padding: 0; }
     .runs-list li { margin: 6px 0; }
@@ -302,6 +389,16 @@ export class AttackRunnerComponent implements OnInit {
         r => this.authScenarioNames.includes(r.scenarioName) && r.vulnerable,
       ).length ?? 0
     );
+  }
+
+  getGroupResults(group: 'validation' | 'covert' | 'auth' | 'access'): TestResult[] {
+    const list = this.currentRun?.results ?? [];
+    const names =
+      group === 'validation' ? this.validationScenarioNames :
+      group === 'covert' ? this.covertChannelNames :
+      group === 'auth' ? this.authScenarioNames :
+      this.accessControlScenarioNames;
+    return list.filter(r => names.includes(r.scenarioName));
   }
 
   resultRowClass(r: TestResult): Record<string, boolean> {
