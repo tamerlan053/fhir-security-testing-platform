@@ -10,5 +10,7 @@ public record CompareCellResponse(
         Boolean vulnerable,
         String classification,
         String reason,
-        String severity
+        String severity,
+        String attackVectorIds,
+        String leakageExposure
 ) {}

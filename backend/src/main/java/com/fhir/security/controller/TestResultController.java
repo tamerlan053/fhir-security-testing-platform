@@ -94,7 +94,9 @@ public class TestResultController {
                 c.name(),
                 tr.getReasonResolved(),
                 tr.getSeverityResolved().name(),
-                tr.getResponseBody()
+                tr.getResponseBody(),
+                tr.getAttackVectorIdsResolved(),
+                tr.getLeakageExposureResolved().name()
         );
     }
 }

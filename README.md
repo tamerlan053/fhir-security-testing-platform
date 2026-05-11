@@ -181,59 +181,58 @@ This project delivers a security research platform capable of automated vulnerab
 - Server security score calculation
 - Aggregated vulnerability report
 
-**Deliverable:** Each server receives a quantified security score; comparative ranking between servers.
+**Deliverable:** Each server receives a quantified security rating; comparative ranking between servers.
 
 > *"The system now provides a structured security rating."*
 
 ---
 
-#### Week 10 — Advanced Frontend Dashboard
+#### Week 10 — Assignment closure: leakage evidence, vectors, UI interpretation
 
-**Objective:** Professional visualization of results.
+**Aligned with project brief — *FHIR Security Testing App: Which attacks are my servers vulnerable to?***
 
-**Implement in Angular:**
-- Security dashboard
-- Charts (vulnerability distribution)
-- Server comparison view
-- Filtering by severity/type
-- Attack execution history
+**Objective:** Tie stored results to the specification: **data leakage paths**, **which fields/vectors** allowed suspicious acceptance, and **interpretation** in the UI—without scope creep beyond the brief.
 
-**Deliverable:** Interactive security dashboard; clear visualization of vulnerabilities.
+**Tasks:**
+- **Data leakage** — Ensure probes (or dedicated scenarios) capture when error/edge responses expose stack traces, verbose internals, or unexpected identifiers; persist a clear **leakage / exposure signal** alongside existing run results.
+- **Blind spots & vectors** — Persist **analysis metadata** that names the tested vector (e.g. extension URL, `contained`, duplicate JSON keys, encoded display) so results can be **aggregated** by vector, not only by free-text reason.
+- **Frontend** — Improve **aggregation and interpretation**: filters or grouping by classification/category, clearer per-scenario evidence (status, classification, reason), building on the existing runner and server-compare views.
 
-> *"A complete security analysis dashboard."*
+**Deliverable:** For a test run, a reviewer can see **what leaked (if anything), what was accepted, and which named attack vector** produced each row.
+
+> *"Understanding these blind spots enables identifying specific fields where unexpected content could remain unnoticed."*
 
 ---
 
 ### Phase 4 — Reporting, Hardening & Finalization (Weeks 11–12)
 
-#### Week 11 — Report Generation & Export
+#### Week 11 — Assignment closure: auth context, Observation-style misuse, optional real-token checks
 
-**Objective:** Generate professional reports.
+**Aligned with project brief** (authentication strategies; access restricted to the authenticated user vs cross-patient / escalation; example of **Observation** misuse).
 
-**Implement:**
-- PDF report generation
-- JSON export
-- CSV export
-- Executive summary per server
-- Technical vulnerability breakdown
+**Objective:** Close the remaining **authorization narrative** and the brief’s **clinical-content misuse** example, within ethical limits on public test servers.
 
-**Deliverable:** Downloadable security assessment report; academic-quality output.
+**Tasks:**
+- **Auth strategy summary** — One consolidated view (UI table or API) per server: open vs advertised OAuth/SMART vs other signals, using existing metadata + probe outcomes.
+- **Authenticated isolation (where possible)** — If a **lab** server and **test client credentials** are available via environment/config (no secrets in git): with a **valid** token, probe read/write **outside** the granted patient/context; otherwise record the scenario as **N/A** with a short justification (still honest relative to *“when authentication is present”*).
+- **Observation-oriented misuse** — Add or extend at least one scenario aligned with the brief (e.g. **Observation** chained to an existing `Patient`, or a **Bundle / transaction** path that tests whether **extra** clinical entries slip through policy), distinct from pure anonymous IDOR where you already have coverage.
+- **Backend unit tests (important only)** — Add focused unit tests for the Week 11 critical paths (new/updated attacks and classification rules), aiming to prevent false positives; not exhaustive coverage.
 
-> *"The system generates professional security reports."*
+**Deliverable:** Written or in-app narrative per server: **auth classification + whether cross-patient / escalation appeared under anonymous tests and, if applicable, under a test token.**
+
+> *"When authentication is present, the system evaluates whether access is correctly restricted… or whether privilege escalation or cross-patient access is possible."*
 
 ---
 
 #### Week 12 — Refinement & Finalization
 
-**Objective:** Polish and finalize the project.
+**Objective:** Freeze scope to the **stated full-stack deliverable**: application layer, backend/database (configs, results, **payloads / analysis metadata**), frontend (**visual inspection, aggregation, interpretation**).
 
 **Tasks:**
-- Code refactoring
-- Performance improvements
-- Add 1–2 advanced attack scenarios
-- Write technical documentation
-- Prepare final presentation
-- Prepare demonstration dataset
+- Verify persistence and API expose enough to **reproduce each finding** (request fingerprint or stable scenario id, response handling policy, classification, severity).
+- Align naming across backend scenarios, API, and Angular labels; refresh architecture notes if needed.
+- Demo on **2–3 public servers** (recorded run + screenshots or script): **inspect → aggregate → interpret**.
+- Short **limitations** section (public sandboxes, token availability, no real PHI).
 
 **Final Deliverable:** A full-stack FHIR Security Testing Platform featuring:
 

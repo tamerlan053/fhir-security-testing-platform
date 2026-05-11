@@ -76,6 +76,12 @@ import { formatApiError } from '../utils/error.utils';
                   <div class="cell-line" *ngIf="cell.classification">
                     <span class="badge" [ngClass]="badgeClass(cell)">{{ cell.classification }}</span>
                   </div>
+                  <div class="cell-leak" *ngIf="cell.leakageExposure && cell.leakageExposure !== 'NONE'">
+                    <span class="leak-pill" [ngClass]="leakPillClass(cell)">{{ cell.leakageExposure }}</span>
+                  </div>
+                  <div class="cell-vec" *ngIf="cell.attackVectorIds" [title]="cell.attackVectorIds">
+                    {{ truncate(cell.attackVectorIds, 44) }}
+                  </div>
                   <div class="cell-reason" *ngIf="cell.reason" [title]="cell.reason">
                     {{ truncate(cell.reason, 56) }}
                   </div>
@@ -130,6 +136,11 @@ import { formatApiError } from '../utils/error.utils';
     .badge-open-policy { background: #bbdefb; color: #0d47a1; }
     .badge-inconclusive { background: #eeeeee; color: #424242; }
     .badge-secure { background: #c8e6c9; color: #1b5e20; }
+    .cell-leak { margin: 4px 0 2px; }
+    .leak-pill { display: inline-block; font-size: 0.62rem; font-weight: 700; padding: 2px 6px; border-radius: 3px; }
+    .leak-verbose { background: #fff8e1; color: #e65100; }
+    .leak-impl { background: #ffcdd2; color: #b71c1c; }
+    .cell-vec { font-size: 0.65rem; color: #455a64; font-family: monospace; line-height: 1.2; margin-bottom: 4px; max-width: 200px; word-break: break-word; }
   `],
 })
 export class ServerCompareComponent implements OnInit {
@@ -180,6 +191,14 @@ export class ServerCompareComponent implements OnInit {
       'cell-open-policy': c === 'OPEN_POLICY',
       'cell-inconclusive': c === 'INCONCLUSIVE',
       'cell-secure': c === 'SECURE',
+    };
+  }
+
+  leakPillClass(cell: CompareCell): Record<string, boolean> {
+    const L = cell.leakageExposure ?? 'NONE';
+    return {
+      'leak-verbose': L === 'VERBOSE_ERROR_BODY',
+      'leak-impl': L === 'IMPLEMENTATION_DETAIL_LEAK',
     };
   }
 

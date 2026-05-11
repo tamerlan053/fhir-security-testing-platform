@@ -6,6 +6,8 @@ export interface CompareCell {
   classification: string | null;
   reason: string | null;
   severity: string | null;
+  attackVectorIds: string | null;
+  leakageExposure: string | null;
 }
 
 export interface CompareServerColumn {

@@ -98,14 +98,14 @@ public class TestComparisonService {
             for (Long id : uniqueInOrder) {
                 TestRun run = latestRunByServer.get(id);
                 if (run == null) {
-                    cells.add(new CompareCellResponse(id, false, null, null, null, null, null));
+                    cells.add(new CompareCellResponse(id, false, null, null, null, null, null, null, null));
                     continue;
                 }
                 Optional<TestResult> match = run.getTestResults().stream()
                         .filter(tr -> scenarioName.equals(tr.getScenario().getName()))
                         .findFirst();
                 if (match.isEmpty()) {
-                    cells.add(new CompareCellResponse(id, false, null, null, null, null, null));
+                    cells.add(new CompareCellResponse(id, false, null, null, null, null, null, null, null));
                 } else {
                     TestResult tr = match.get();
                     AttackClassification c = tr.getClassificationResolved();
@@ -116,7 +116,9 @@ public class TestComparisonService {
                             c == AttackClassification.VULNERABLE,
                             c.name(),
                             tr.getReasonResolved(),
-                            tr.getSeverityResolved().name()
+                            tr.getSeverityResolved().name(),
+                            tr.getAttackVectorIdsResolved(),
+                            tr.getLeakageExposureResolved().name()
                     ));
                 }
             }

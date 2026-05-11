@@ -74,12 +74,14 @@ public class UnauthorizedWriteIdTamperingAttack extends AbstractAccessControlAtt
 
         if (putOutcome.classification() == AttackClassification.VULNERABLE) {
             if (persisted) {
-                return new AttackResult(
+                return AttackResult.of(
                         putOutcome.statusCode(),
                         combinedBody,
                         putOutcome.classification(),
                         putOutcome.reason() + " Verified persistence of tampered marker in follow-up GET.",
-                        putOutcome.severity()
+                        putOutcome.severity(),
+                        putOutcome.attackVectorIds(),
+                        putOutcome.leakageExposure()
                 );
             }
             // PUT returned success, but the expected modification is not visible. Avoid overclaiming vulnerability.
@@ -94,12 +96,14 @@ public class UnauthorizedWriteIdTamperingAttack extends AbstractAccessControlAtt
         String extra = persisted
                 ? " Follow-up GET shows tampered marker persisted."
                 : " Follow-up GET does not show tampered marker.";
-        return new AttackResult(
+        return AttackResult.of(
                 putOutcome.statusCode(),
                 combinedBody,
                 putOutcome.classification(),
                 putOutcome.reason() + extra,
-                putOutcome.severity()
+                putOutcome.severity(),
+                putOutcome.attackVectorIds(),
+                putOutcome.leakageExposure()
         );
     }
 
@@ -133,12 +137,14 @@ public class UnauthorizedWriteIdTamperingAttack extends AbstractAccessControlAtt
                 + (getResult.responseBody() != null ? getResult.responseBody() : "");
 
         String extra = " Follow-up GET HTTP " + getResult.statusCode() + ".";
-        return new AttackResult(
+        return AttackResult.of(
                 observation.statusCode(),
                 combinedBody,
                 postOutcome.classification(),
                 postOutcome.reason() + extra,
-                postOutcome.severity()
+                postOutcome.severity(),
+                postOutcome.attackVectorIds(),
+                postOutcome.leakageExposure()
         );
     }
 }

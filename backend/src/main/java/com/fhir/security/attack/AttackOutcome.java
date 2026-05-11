@@ -8,7 +8,7 @@ public final class AttackOutcome {
     private AttackOutcome() {}
 
     public static AttackResult secure(int statusCode, String responseBody, String reason) {
-        return new AttackResult(
+        return AttackResult.of(
                 statusCode,
                 responseBody,
                 AttackClassification.SECURE,
@@ -18,7 +18,7 @@ public final class AttackOutcome {
     }
 
     public static AttackResult vulnerable(int statusCode, String responseBody, String reason, AttackSeverity severity) {
-        return new AttackResult(
+        return AttackResult.of(
                 statusCode,
                 responseBody,
                 AttackClassification.VULNERABLE,
@@ -28,7 +28,7 @@ public final class AttackOutcome {
     }
 
     public static AttackResult openPolicy(int statusCode, String responseBody, String reason) {
-        return new AttackResult(
+        return AttackResult.of(
                 statusCode,
                 responseBody,
                 AttackClassification.OPEN_POLICY,
@@ -38,7 +38,7 @@ public final class AttackOutcome {
     }
 
     public static AttackResult misconfigured(int statusCode, String responseBody, String reason, AttackSeverity severity) {
-        return new AttackResult(
+        return AttackResult.of(
                 statusCode,
                 responseBody,
                 AttackClassification.MISCONFIGURED,
@@ -48,7 +48,7 @@ public final class AttackOutcome {
     }
 
     public static AttackResult inconclusive(int statusCode, String responseBody, String reason) {
-        return new AttackResult(
+        return AttackResult.of(
                 statusCode,
                 responseBody,
                 AttackClassification.INCONCLUSIVE,
@@ -256,12 +256,18 @@ public final class AttackOutcome {
         String mergedReason = primary.reason()
                 + " | Also: " + secondary.classification() + " — " + secondary.reason();
         int code = primary.statusCode() != 0 ? primary.statusCode() : secondary.statusCode();
-        return new AttackResult(
+        LeakageExposure mergedLeak = ResponseBodyLeakageAnalyzer.worst(
+                ResponseBodyLeakageAnalyzer.worst(primary.leakageExposure(), secondary.leakageExposure()),
+                ResponseBodyLeakageAnalyzer.analyze(code, combinedBody)
+        );
+        return AttackResult.of(
                 code,
                 combinedBody,
                 primary.classification(),
                 mergedReason,
-                worstSeverity(primary.severity(), secondary.severity())
+                worstSeverity(primary.severity(), secondary.severity()),
+                AttackVectorCatalog.mergeIds(primary.attackVectorIds(), secondary.attackVectorIds()),
+                mergedLeak
         );
     }
 

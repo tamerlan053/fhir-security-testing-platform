@@ -2,6 +2,7 @@ package com.fhir.security.entity;
 
 import com.fhir.security.attack.AttackClassification;
 import com.fhir.security.attack.AttackSeverity;
+import com.fhir.security.attack.LeakageExposure;
 import jakarta.persistence.*;
 
 @Entity
@@ -34,6 +35,14 @@ public class TestResult {
 
     @Column(columnDefinition = "TEXT")
     private String responseBody;
+
+    /** Comma-separated stable tags for aggregation (e.g. http.post.patient,fhir.extension.covert_channel). */
+    @Column(name = "attack_vector_ids", columnDefinition = "TEXT")
+    private String attackVectorIds;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "leakage_exposure")
+    private LeakageExposure leakageExposure;
 
     public TestResult() {}
 
@@ -114,6 +123,30 @@ public class TestResult {
 
     public void setSeverity(AttackSeverity severity) {
         this.severity = severity;
+    }
+
+    public String getAttackVectorIds() {
+        return attackVectorIds;
+    }
+
+    public void setAttackVectorIds(String attackVectorIds) {
+        this.attackVectorIds = attackVectorIds;
+    }
+
+    public LeakageExposure getLeakageExposure() {
+        return leakageExposure;
+    }
+
+    public void setLeakageExposure(LeakageExposure leakageExposure) {
+        this.leakageExposure = leakageExposure;
+    }
+
+    public String getAttackVectorIdsResolved() {
+        return attackVectorIds != null ? attackVectorIds : "";
+    }
+
+    public LeakageExposure getLeakageExposureResolved() {
+        return leakageExposure != null ? leakageExposure : LeakageExposure.NONE;
     }
 
     /**

@@ -8,5 +8,7 @@ public record TestResultResponse(
         String classification,
         String reason,
         String severity,
-        String responseBody
+        String responseBody,
+        String attackVectorIds,
+        String leakageExposure
 ) {}

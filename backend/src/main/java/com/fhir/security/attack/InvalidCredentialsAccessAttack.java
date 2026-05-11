@@ -158,12 +158,14 @@ public class InvalidCredentialsAccessAttack implements ExecutableAttack {
                 aggregate = AttackOutcome.combineWorst(aggregate, step, log.toString());
             }
         }
-        return new AttackResult(
+        return AttackResult.of(
                 aggregate.statusCode(),
                 log.toString(),
                 aggregate.classification(),
                 aggregate.reason(),
-                aggregate.severity()
+                aggregate.severity(),
+                aggregate.attackVectorIds(),
+                aggregate.leakageExposure()
         );
     }
 }

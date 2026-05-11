@@ -6,7 +6,7 @@ import { RouterLink } from '@angular/router';
 import { AttackService } from '../services/attack.service';
 import { ServerService } from '../services/server.service';
 import { FhirServer } from '../models/server.model';
-import { TestRun, TestResult } from '../models/attack.model';
+import { LeakageExposure, TestRun, TestResult } from '../models/attack.model';
 import { formatApiError } from '../utils/error.utils';
 
 @Component({
@@ -59,6 +59,29 @@ import { formatApiError } from '../utils/error.utils';
           {{ getAccessControlVulnerableCount() }} of {{ getAccessControlResultCount() }} authorization / write scenarios
           <strong>VULNERABLE</strong>
         </p>
+        <p class="summary leak-summary" *ngIf="currentRun.results.length > 0">
+          {{ getNonNoneLeakageCount() }} of {{ currentRun.results.length }} scenarios with a
+          <strong>non-NONE</strong> response-body leakage heuristic (verbose errors or implementation hints)
+        </p>
+
+        <div class="filters" *ngIf="currentRun.results.length > 0">
+          <span class="filter-label">Interpretation filters</span>
+          <select id="cls-filter" [(ngModel)]="classificationFilter">
+            <option value="">All classifications</option>
+            <option value="SECURE">SECURE</option>
+            <option value="VULNERABLE">VULNERABLE</option>
+            <option value="OPEN_POLICY">OPEN_POLICY</option>
+            <option value="MISCONFIGURED">MISCONFIGURED</option>
+            <option value="INCONCLUSIVE">INCONCLUSIVE</option>
+          </select>
+          <select id="leak-filter" [(ngModel)]="leakageFilter">
+            <option value="">All leakage tiers</option>
+            <option value="ANY">Any non-NONE</option>
+            <option value="VERBOSE_ERROR_BODY">VERBOSE_ERROR_BODY</option>
+            <option value="IMPLEMENTATION_DETAIL_LEAK">IMPLEMENTATION_DETAIL_LEAK</option>
+          </select>
+          <button type="button" class="btn-secondary" (click)="clearFilters()">Clear</button>
+        </div>
 
         <div class="group">
           <h4 class="group-title">Validation / injection scenarios</h4>
@@ -67,13 +90,17 @@ import { formatApiError } from '../utils/error.utils';
               <tr>
                 <th>Attack</th>
                 <th>Status</th>
+                <th>Vectors</th>
+                <th>Leakage</th>
                 <th>Classification &amp; explanation</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let r of getGroupResults('validation')" [ngClass]="resultRowClass(r)">
+              <tr *ngFor="let r of getFilteredGroupResults('validation')" [ngClass]="resultRowClass(r)">
                 <td>{{ r.scenarioName }}</td>
                 <td class="mono">{{ r.statusCode }}</td>
+                <td class="vectors mono" [title]="r.attackVectorIds || ''">{{ formatVectors(r) }}</td>
+                <td><span class="leak-pill" [ngClass]="leakPillClass(r)">{{ r.leakageExposure }}</span></td>
                 <td class="classification-cell">
                   <span class="badge" [ngClass]="badgeClass(r)">{{ r.classification }}</span>
                   <span class="sev" *ngIf="r.severity">{{ r.severity }}</span>
@@ -81,7 +108,10 @@ import { formatApiError } from '../utils/error.utils';
                 </td>
               </tr>
               <tr *ngIf="getGroupResults('validation').length === 0">
-                <td colspan="3">No results in this group.</td>
+                <td colspan="5">No results in this group.</td>
+              </tr>
+              <tr *ngIf="getGroupResults('validation').length > 0 && getFilteredGroupResults('validation').length === 0">
+                <td colspan="5" class="muted">No rows match the current filters.</td>
               </tr>
             </tbody>
           </table>
@@ -94,13 +124,17 @@ import { formatApiError } from '../utils/error.utils';
               <tr>
                 <th>Attack</th>
                 <th>Status</th>
+                <th>Vectors</th>
+                <th>Leakage</th>
                 <th>Classification &amp; explanation</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let r of getGroupResults('covert')" [ngClass]="resultRowClass(r)">
+              <tr *ngFor="let r of getFilteredGroupResults('covert')" [ngClass]="resultRowClass(r)">
                 <td>{{ r.scenarioName }}</td>
                 <td class="mono">{{ r.statusCode }}</td>
+                <td class="vectors mono" [title]="r.attackVectorIds || ''">{{ formatVectors(r) }}</td>
+                <td><span class="leak-pill" [ngClass]="leakPillClass(r)">{{ r.leakageExposure }}</span></td>
                 <td class="classification-cell">
                   <span class="badge" [ngClass]="badgeClass(r)">{{ r.classification }}</span>
                   <span class="sev" *ngIf="r.severity">{{ r.severity }}</span>
@@ -108,7 +142,10 @@ import { formatApiError } from '../utils/error.utils';
                 </td>
               </tr>
               <tr *ngIf="getGroupResults('covert').length === 0">
-                <td colspan="3">No results in this group.</td>
+                <td colspan="5">No results in this group.</td>
+              </tr>
+              <tr *ngIf="getGroupResults('covert').length > 0 && getFilteredGroupResults('covert').length === 0">
+                <td colspan="5" class="muted">No rows match the current filters.</td>
               </tr>
             </tbody>
           </table>
@@ -121,13 +158,17 @@ import { formatApiError } from '../utils/error.utils';
               <tr>
                 <th>Attack</th>
                 <th>Status</th>
+                <th>Vectors</th>
+                <th>Leakage</th>
                 <th>Classification &amp; explanation</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let r of getGroupResults('auth')" [ngClass]="resultRowClass(r)">
+              <tr *ngFor="let r of getFilteredGroupResults('auth')" [ngClass]="resultRowClass(r)">
                 <td>{{ r.scenarioName }}</td>
                 <td class="mono">{{ r.statusCode }}</td>
+                <td class="vectors mono" [title]="r.attackVectorIds || ''">{{ formatVectors(r) }}</td>
+                <td><span class="leak-pill" [ngClass]="leakPillClass(r)">{{ r.leakageExposure }}</span></td>
                 <td class="classification-cell">
                   <span class="badge" [ngClass]="badgeClass(r)">{{ r.classification }}</span>
                   <span class="sev" *ngIf="r.severity">{{ r.severity }}</span>
@@ -135,7 +176,10 @@ import { formatApiError } from '../utils/error.utils';
                 </td>
               </tr>
               <tr *ngIf="getGroupResults('auth').length === 0">
-                <td colspan="3">No results in this group.</td>
+                <td colspan="5">No results in this group.</td>
+              </tr>
+              <tr *ngIf="getGroupResults('auth').length > 0 && getFilteredGroupResults('auth').length === 0">
+                <td colspan="5" class="muted">No rows match the current filters.</td>
               </tr>
             </tbody>
           </table>
@@ -148,13 +192,17 @@ import { formatApiError } from '../utils/error.utils';
               <tr>
                 <th>Attack</th>
                 <th>Status</th>
+                <th>Vectors</th>
+                <th>Leakage</th>
                 <th>Classification &amp; explanation</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let r of getGroupResults('access')" [ngClass]="resultRowClass(r)">
+              <tr *ngFor="let r of getFilteredGroupResults('access')" [ngClass]="resultRowClass(r)">
                 <td>{{ r.scenarioName }}</td>
                 <td class="mono">{{ r.statusCode }}</td>
+                <td class="vectors mono" [title]="r.attackVectorIds || ''">{{ formatVectors(r) }}</td>
+                <td><span class="leak-pill" [ngClass]="leakPillClass(r)">{{ r.leakageExposure }}</span></td>
                 <td class="classification-cell">
                   <span class="badge" [ngClass]="badgeClass(r)">{{ r.classification }}</span>
                   <span class="sev" *ngIf="r.severity">{{ r.severity }}</span>
@@ -162,7 +210,10 @@ import { formatApiError } from '../utils/error.utils';
                 </td>
               </tr>
               <tr *ngIf="getGroupResults('access').length === 0">
-                <td colspan="3">No results in this group.</td>
+                <td colspan="5">No results in this group.</td>
+              </tr>
+              <tr *ngIf="getGroupResults('access').length > 0 && getFilteredGroupResults('access').length === 0">
+                <td colspan="5" class="muted">No rows match the current filters.</td>
               </tr>
             </tbody>
           </table>
@@ -226,6 +277,18 @@ import { formatApiError } from '../utils/error.utils';
     .runs-list li { margin: 6px 0; }
     .run-link { background: none; border: none; color: #1976d2; cursor: pointer; padding: 4px 0; text-align: left; }
     .run-link:hover { text-decoration: underline; }
+    .leak-summary { font-size: 0.95em; color: #6a1b9a; }
+    .filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 12px 0 18px; padding: 10px 12px; background: #fafafa; border: 1px solid #eee; border-radius: 6px; }
+    .filter-label { font-weight: 600; color: #444; margin-right: 4px; }
+    .filters select { padding: 6px 10px; min-width: 180px; }
+    .btn-secondary { padding: 8px 14px; background: #eceff1; color: #37474f; border: 1px solid #cfd8dc; border-radius: 4px; cursor: pointer; }
+    .btn-secondary:hover { background: #dfe4e7; }
+    .vectors { font-size: 0.75rem; max-width: 220px; word-break: break-word; color: #37474f; }
+    .leak-pill { display: inline-block; font-size: 0.68rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; background: #eceff1; color: #455a64; }
+    .leak-none { background: #e8f5e9; color: #1b5e20; }
+    .leak-verbose { background: #fff8e1; color: #f57f17; }
+    .leak-impl { background: #ffebee; color: #b71c1c; }
+    .muted { color: #777; font-style: italic; }
   `]
 })
 export class AttackRunnerComponent implements OnInit {
@@ -262,6 +325,10 @@ export class AttackRunnerComponent implements OnInit {
   running = false;
   errorMessage = '';
   successMessage = '';
+
+  /** Week 10 — filter rows without hiding the group headers. */
+  classificationFilter = '';
+  leakageFilter = '';
 
   constructor(
     private attackService: AttackService,
@@ -401,6 +468,52 @@ export class AttackRunnerComponent implements OnInit {
     return list.filter(r => names.includes(r.scenarioName));
   }
 
+  getFilteredGroupResults(group: 'validation' | 'covert' | 'auth' | 'access'): TestResult[] {
+    return this.getGroupResults(group).filter(r => this.matchesFilters(r));
+  }
+
+  private matchesFilters(r: TestResult): boolean {
+    if (this.classificationFilter && (r.classification ?? '') !== this.classificationFilter) {
+      return false;
+    }
+    const leak = (r.leakageExposure ?? 'NONE') as LeakageExposure;
+    if (this.leakageFilter === 'ANY') {
+      return leak !== 'NONE';
+    }
+    if (this.leakageFilter && leak !== this.leakageFilter) {
+      return false;
+    }
+    return true;
+  }
+
+  clearFilters(): void {
+    this.classificationFilter = '';
+    this.leakageFilter = '';
+    this.cdr.detectChanges();
+  }
+
+  getNonNoneLeakageCount(): number {
+    const list = this.currentRun?.results ?? [];
+    return list.filter(r => (r.leakageExposure ?? 'NONE') !== 'NONE').length;
+  }
+
+  formatVectors(r: TestResult): string {
+    const v = r.attackVectorIds?.trim() ?? '';
+    if (!v) {
+      return '—';
+    }
+    return v.length > 90 ? v.slice(0, 88) + '…' : v;
+  }
+
+  leakPillClass(r: TestResult): Record<string, boolean> {
+    const L = r.leakageExposure ?? 'NONE';
+    return {
+      'leak-none': L === 'NONE',
+      'leak-verbose': L === 'VERBOSE_ERROR_BODY',
+      'leak-impl': L === 'IMPLEMENTATION_DETAIL_LEAK',
+    };
+  }
+
   resultRowClass(r: TestResult): Record<string, boolean> {
     const c = r.classification ?? (r.vulnerable ? 'VULNERABLE' : 'SECURE');
     return {
@@ -432,7 +545,14 @@ export class AttackRunnerComponent implements OnInit {
   loadRun(testRunId: number): void {
     this.attackService.getResults(testRunId).subscribe({
       next: (run) => {
-        this.currentRun = run;
+        this.currentRun = {
+          ...run,
+          results: run.results.map((r) => ({
+            ...r,
+            attackVectorIds: r.attackVectorIds ?? '',
+            leakageExposure: (r.leakageExposure ?? 'NONE') as LeakageExposure,
+          })),
+        };
         this.cdr.detectChanges();
       },
       error: (err) => {

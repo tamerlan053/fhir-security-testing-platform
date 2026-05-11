@@ -2,7 +2,10 @@ package com.fhir.security.service;
 
 import com.fhir.security.attack.AttackRegistry;
 import com.fhir.security.attack.AttackResult;
+import com.fhir.security.attack.AttackVectorCatalog;
 import com.fhir.security.attack.ExecutableAttack;
+import com.fhir.security.attack.LeakageExposure;
+import com.fhir.security.attack.ResponseBodyLeakageAnalyzer;
 import com.fhir.security.entity.AttackScenario;
 import com.fhir.security.entity.FhirServer;
 import com.fhir.security.entity.TestResult;
@@ -43,7 +46,8 @@ public class AttackExecutorService {
         testRunRepository.save(run);
 
         for (ExecutableAttack scenario : registry.getScenarios()) {
-            AttackResult result = scenario.execute(server);
+            AttackResult raw = scenario.execute(server);
+            AttackResult enriched = enrichForPersistence(scenario, raw);
 
             AttackScenario entityScenario = attackScenarioRepository
                     .findByName(scenario.getName())
@@ -58,16 +62,37 @@ public class AttackExecutorService {
             TestResult tr = new TestResult();
             tr.setTestRun(run);
             tr.setScenario(entityScenario);
-            tr.setStatusCode(result.statusCode());
-            tr.setResponseBody(result.responseBody());
-            tr.setClassification(result.classification());
-            tr.setReason(result.reason());
-            tr.setSeverity(result.severity());
-            tr.setVulnerable(result.vulnerable());
+            tr.setStatusCode(enriched.statusCode());
+            tr.setResponseBody(enriched.responseBody());
+            tr.setClassification(enriched.classification());
+            tr.setReason(enriched.reason());
+            tr.setSeverity(enriched.severity());
+            tr.setVulnerable(enriched.vulnerable());
+            tr.setAttackVectorIds(enriched.attackVectorIds());
+            tr.setLeakageExposure(enriched.leakageExposure());
             testResultRepository.save(tr);
         }
 
         log.info("Executed {} attacks for server {}", registry.getScenarios().size(), server.getName());
         return run;
+    }
+
+    /**
+     * Merge catalog vector tags with any per-probe tags from the attack, and classify response-body leakage (Week 10).
+     */
+    private static AttackResult enrichForPersistence(ExecutableAttack scenario, AttackResult result) {
+        String catalog = AttackVectorCatalog.tagsFor(scenario.getClass());
+        String mergedVectors = AttackVectorCatalog.mergeIds(result.attackVectorIds(), catalog);
+        LeakageExposure fromBody = ResponseBodyLeakageAnalyzer.analyze(result.statusCode(), result.responseBody());
+        LeakageExposure leak = ResponseBodyLeakageAnalyzer.worst(result.leakageExposure(), fromBody);
+        return AttackResult.of(
+                result.statusCode(),
+                result.responseBody(),
+                result.classification(),
+                result.reason(),
+                result.severity(),
+                mergedVectors,
+                leak
+        );
     }
 }

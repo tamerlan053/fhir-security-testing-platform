@@ -5,6 +5,8 @@ export type AttackClassification =
   | 'MISCONFIGURED'
   | 'INCONCLUSIVE';
 
+export type LeakageExposure = 'NONE' | 'VERBOSE_ERROR_BODY' | 'IMPLEMENTATION_DETAIL_LEAK';
+
 export interface TestResult {
   id: number;
   scenarioName: string;
@@ -15,6 +17,10 @@ export interface TestResult {
   reason: string;
   severity: string;
   responseBody: string;
+  /** Comma-separated stable probe tags from the backend catalog (Week 10). */
+  attackVectorIds: string;
+  /** Heuristic response-body leakage tier. */
+  leakageExposure: LeakageExposure;
 }
 
 export interface TestRun {
