@@ -2,6 +2,7 @@ package com.fhir.security.controller;
 
 import com.fhir.security.dto.ApiError;
 import com.fhir.security.exception.FhirServerException;
+import com.fhir.security.exception.TestResultNotFoundException;
 import com.fhir.security.exception.TestRunNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,6 +32,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
                 .body(ApiError.of(e.getMessage(), "TEST_RUN_NOT_FOUND"));
+    }
+
+    @ExceptionHandler(TestResultNotFoundException.class)
+    public ResponseEntity<ApiError> handleTestResultNotFound(TestResultNotFoundException e) {
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ApiError.of(e.getMessage(), "TEST_RESULT_NOT_FOUND"));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

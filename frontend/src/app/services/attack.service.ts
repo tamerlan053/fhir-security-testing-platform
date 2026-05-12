@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { RunResult, TestRun, TestRunSummary } from '../models/attack.model';
+import { RunResult, TestResult, TestRun, TestRunSummary } from '../models/attack.model';
 import { CompareResponse } from '../models/compare.model';
 
 @Injectable({
@@ -19,6 +19,10 @@ export class AttackService {
 
     getResults(testRunId: number): Observable<TestRun> {
         return this.http.get<TestRun>(`${this.baseUrl}/api/results/${testRunId}`);
+    }
+
+    getTestResultById(testResultId: number): Observable<TestResult> {
+        return this.http.get<TestResult>(`${this.baseUrl}/api/results/row/${testResultId}`);
     }
 
     getRunsForServer(serverId: number): Observable<TestRunSummary[]> {

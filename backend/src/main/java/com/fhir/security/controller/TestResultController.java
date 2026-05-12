@@ -6,7 +6,9 @@ import com.fhir.security.dto.response.TestResultResponse;
 import com.fhir.security.dto.response.TestRunResponse;
 import com.fhir.security.entity.TestResult;
 import com.fhir.security.entity.TestRun;
+import com.fhir.security.exception.TestResultNotFoundException;
 import com.fhir.security.exception.TestRunNotFoundException;
+import com.fhir.security.repository.TestResultRepository;
 import com.fhir.security.repository.TestRunRepository;
 import com.fhir.security.service.TestComparisonService;
 import org.slf4j.Logger;
@@ -25,11 +27,14 @@ public class TestResultController {
     private static final Logger log = LoggerFactory.getLogger(TestResultController.class);
 
     private final TestRunRepository testRunRepository;
+    private final TestResultRepository testResultRepository;
     private final TestComparisonService testComparisonService;
 
     public TestResultController(TestRunRepository testRunRepository,
+                                TestResultRepository testResultRepository,
                                 TestComparisonService testComparisonService) {
         this.testRunRepository = testRunRepository;
+        this.testResultRepository = testResultRepository;
         this.testComparisonService = testComparisonService;
     }
 
@@ -61,6 +66,18 @@ public class TestResultController {
             throw new IllegalArgumentException("serverIds must contain at least one id");
         }
         return out;
+    }
+
+    /**
+     * Single test result (full response body) for UI detail view.
+     */
+    @GetMapping("/row/{testResultId:\\d+}")
+    @Transactional(readOnly = true)
+    public ResponseEntity<TestResultResponse> getTestResult(@PathVariable Long testResultId) {
+        log.info("GET /api/results/row/{} - fetching single test result", testResultId);
+        TestResult tr = testResultRepository.findById(testResultId)
+                .orElseThrow(() -> new TestResultNotFoundException(testResultId));
+        return ResponseEntity.ok(toResponse(tr));
     }
 
     @GetMapping("/{testRunId:\\d+}")

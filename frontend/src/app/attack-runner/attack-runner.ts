@@ -93,6 +93,7 @@ import { formatApiError } from '../utils/error.utils';
                 <th>Vectors</th>
                 <th>Leakage</th>
                 <th>Classification &amp; explanation</th>
+                <th>Response</th>
               </tr>
             </thead>
             <tbody>
@@ -106,12 +107,19 @@ import { formatApiError } from '../utils/error.utils';
                   <span class="sev" *ngIf="r.severity">{{ r.severity }}</span>
                   <div class="reason" [title]="r.reason">{{ truncateReason(r.reason) }}</div>
                 </td>
+                <td class="actions-cell">
+                  <a
+                    [routerLink]="['/attacks/response', r.id]"
+                    [queryParams]="responseBodyLinkQueryParams()"
+                    class="link-body"
+                    >Read response body</a>
+                </td>
               </tr>
               <tr *ngIf="getGroupResults('validation').length === 0">
-                <td colspan="5">No results in this group.</td>
+                <td colspan="6">No results in this group.</td>
               </tr>
               <tr *ngIf="getGroupResults('validation').length > 0 && getFilteredGroupResults('validation').length === 0">
-                <td colspan="5" class="muted">No rows match the current filters.</td>
+                <td colspan="6" class="muted">No rows match the current filters.</td>
               </tr>
             </tbody>
           </table>
@@ -127,6 +135,7 @@ import { formatApiError } from '../utils/error.utils';
                 <th>Vectors</th>
                 <th>Leakage</th>
                 <th>Classification &amp; explanation</th>
+                <th>Response</th>
               </tr>
             </thead>
             <tbody>
@@ -140,12 +149,19 @@ import { formatApiError } from '../utils/error.utils';
                   <span class="sev" *ngIf="r.severity">{{ r.severity }}</span>
                   <div class="reason" [title]="r.reason">{{ truncateReason(r.reason) }}</div>
                 </td>
+                <td class="actions-cell">
+                  <a
+                    [routerLink]="['/attacks/response', r.id]"
+                    [queryParams]="responseBodyLinkQueryParams()"
+                    class="link-body"
+                    >Read response body</a>
+                </td>
               </tr>
               <tr *ngIf="getGroupResults('covert').length === 0">
-                <td colspan="5">No results in this group.</td>
+                <td colspan="6">No results in this group.</td>
               </tr>
               <tr *ngIf="getGroupResults('covert').length > 0 && getFilteredGroupResults('covert').length === 0">
-                <td colspan="5" class="muted">No rows match the current filters.</td>
+                <td colspan="6" class="muted">No rows match the current filters.</td>
               </tr>
             </tbody>
           </table>
@@ -161,6 +177,7 @@ import { formatApiError } from '../utils/error.utils';
                 <th>Vectors</th>
                 <th>Leakage</th>
                 <th>Classification &amp; explanation</th>
+                <th>Response</th>
               </tr>
             </thead>
             <tbody>
@@ -174,12 +191,19 @@ import { formatApiError } from '../utils/error.utils';
                   <span class="sev" *ngIf="r.severity">{{ r.severity }}</span>
                   <div class="reason" [title]="r.reason">{{ truncateReason(r.reason) }}</div>
                 </td>
+                <td class="actions-cell">
+                  <a
+                    [routerLink]="['/attacks/response', r.id]"
+                    [queryParams]="responseBodyLinkQueryParams()"
+                    class="link-body"
+                    >Read response body</a>
+                </td>
               </tr>
               <tr *ngIf="getGroupResults('auth').length === 0">
-                <td colspan="5">No results in this group.</td>
+                <td colspan="6">No results in this group.</td>
               </tr>
               <tr *ngIf="getGroupResults('auth').length > 0 && getFilteredGroupResults('auth').length === 0">
-                <td colspan="5" class="muted">No rows match the current filters.</td>
+                <td colspan="6" class="muted">No rows match the current filters.</td>
               </tr>
             </tbody>
           </table>
@@ -195,6 +219,7 @@ import { formatApiError } from '../utils/error.utils';
                 <th>Vectors</th>
                 <th>Leakage</th>
                 <th>Classification &amp; explanation</th>
+                <th>Response</th>
               </tr>
             </thead>
             <tbody>
@@ -208,12 +233,19 @@ import { formatApiError } from '../utils/error.utils';
                   <span class="sev" *ngIf="r.severity">{{ r.severity }}</span>
                   <div class="reason" [title]="r.reason">{{ truncateReason(r.reason) }}</div>
                 </td>
+                <td class="actions-cell">
+                  <a
+                    [routerLink]="['/attacks/response', r.id]"
+                    [queryParams]="responseBodyLinkQueryParams()"
+                    class="link-body"
+                    >Read response body</a>
+                </td>
               </tr>
               <tr *ngIf="getGroupResults('access').length === 0">
-                <td colspan="5">No results in this group.</td>
+                <td colspan="6">No results in this group.</td>
               </tr>
               <tr *ngIf="getGroupResults('access').length > 0 && getFilteredGroupResults('access').length === 0">
-                <td colspan="5" class="muted">No rows match the current filters.</td>
+                <td colspan="6" class="muted">No rows match the current filters.</td>
               </tr>
             </tbody>
           </table>
@@ -289,6 +321,9 @@ import { formatApiError } from '../utils/error.utils';
     .leak-verbose { background: #fff8e1; color: #f57f17; }
     .leak-impl { background: #ffebee; color: #b71c1c; }
     .muted { color: #777; font-style: italic; }
+    .actions-cell { white-space: nowrap; vertical-align: middle; }
+    .link-body { font-size: 0.82rem; color: #1565c0; font-weight: 600; text-decoration: none; }
+    .link-body:hover { text-decoration: underline; }
   `]
 })
 export class AttackRunnerComponent implements OnInit {
@@ -340,9 +375,25 @@ export class AttackRunnerComponent implements OnInit {
   ngOnInit(): void {
     this.loadServers();
     this.route.queryParams.subscribe(params => {
-      const serverId = params['serverId'];
-      if (serverId) {
-        this.selectedServerId = +serverId;
+      const testRunIdRaw = params['testRunId'];
+      const serverIdRaw = params['serverId'];
+
+      if (testRunIdRaw != null && String(testRunIdRaw).trim() !== '') {
+        const testRunId = +testRunIdRaw;
+        if (Number.isFinite(testRunId)) {
+          if (serverIdRaw != null && String(serverIdRaw).trim() !== '') {
+            this.selectedServerId = +serverIdRaw;
+          }
+          this.loadRun(testRunId);
+          if (serverIdRaw != null && String(serverIdRaw).trim() !== '') {
+            this.loadPreviousRunsForSelectedServer();
+          }
+          return;
+        }
+      }
+
+      if (serverIdRaw) {
+        this.selectedServerId = +serverIdRaw;
         this.onServerChange();
       }
     });
@@ -365,19 +416,36 @@ export class AttackRunnerComponent implements OnInit {
   onServerChange(): void {
     this.currentRun = null;
     if (this.selectedServerId) {
-      this.attackService.getRunsForServer(this.selectedServerId).subscribe({
-        next: (runs) => {
-          this.previousRuns = runs;
-          this.cdr.detectChanges();
-        },
-        error: () => {
-          this.previousRuns = [];
-          this.cdr.detectChanges();
-        }
-      });
+      this.loadPreviousRunsForSelectedServer();
     } else {
       this.previousRuns = [];
     }
+  }
+
+  private loadPreviousRunsForSelectedServer(): void {
+    if (!this.selectedServerId) {
+      this.previousRuns = [];
+      return;
+    }
+    this.attackService.getRunsForServer(this.selectedServerId).subscribe({
+      next: (runs) => {
+        this.previousRuns = runs;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.previousRuns = [];
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  /** Query params so the response-body page can navigate back to this same run. */
+  responseBodyLinkQueryParams(): Record<string, number> {
+    const run = this.currentRun;
+    if (!run) {
+      return {};
+    }
+    return { testRunId: run.id, serverId: run.serverId };
   }
 
   runAttacks(): void {
