@@ -179,6 +179,50 @@ public final class AttackOutcome {
     /**
      * GET access to another patient&apos;s resource (IDOR-style read).
      */
+    /**
+     * Read of a Patient using a valid lab token where the id must be outside the granted context (Week 11).
+     */
+    public static AttackResult authenticatedOutOfScopePatientRead(int statusCode, String responseBody, boolean oauthAdvertised) {
+        if (statusCode == 401 || statusCode == 403) {
+            return secure(
+                    statusCode,
+                    responseBody,
+                    "Out-of-scope Patient read rejected with the configured bearer token (isolation looks enforced)."
+            );
+        }
+        if (statusCode == 200 || statusCode == 201) {
+            if (oauthAdvertised) {
+                return vulnerable(
+                        statusCode,
+                        responseBody,
+                        "Bearer token could read a Patient id configured as outside the granted context while OAuth/SMART is advertised (broken isolation / escalation risk).",
+                        AttackSeverity.CRITICAL
+                );
+            }
+            return vulnerable(
+                    statusCode,
+                    responseBody,
+                    "Bearer token could read a Patient id configured as outside the granted context (broken isolation on this server).",
+                    AttackSeverity.HIGH
+            );
+        }
+        if (statusCode == 404) {
+            return secure(
+                    statusCode,
+                    responseBody,
+                    "Patient not found or not visible with the test token (no cross-context read signal)."
+            );
+        }
+        if (statusCode == 500) {
+            return inconclusive(
+                    statusCode,
+                    responseBody,
+                    "Server error during authenticated out-of-scope read probe."
+            );
+        }
+        return inconclusive(statusCode, responseBody, "Unexpected HTTP status on authenticated out-of-scope read: " + statusCode);
+    }
+
     public static AttackResult crossPatientRead(int statusCode, String responseBody, boolean oauthAdvertised) {
         if (statusCode == 401 || statusCode == 403) {
             return secure(

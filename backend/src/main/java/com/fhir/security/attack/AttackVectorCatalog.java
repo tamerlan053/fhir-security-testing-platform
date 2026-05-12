@@ -25,6 +25,8 @@ public final class AttackVectorCatalog {
             case "InvalidCredentialsAccessAttack" -> "http.get.patient,http.get.observation,auth.basic_invalid,auth.bearer_forged,auth.oauth_token_endpoint";
             case "OpenEndpointDetectionAttack" -> "http.get.metadata,http.get.smart_well_known,http.get.patient_anonymous";
             case "CrossPatientAccessAttack" -> "http.get.patient_by_id,http.post.observation_subject,http.get.observation_search,idor.cross_patient";
+            case "AuthenticatedTokenIsolationAttack" -> "auth.bearer_lab_token,http.get.patient_out_of_scope,auth.token_isolation";
+            case "ObservationBundleDuplicateClinicalAttack" -> "fhir.bundle.transaction,http.post.observation_batch,fhir.observation.duplicate_clinical";
             case "UnauthorizedWriteIdTamperingAttack" -> "http.put.patient,http.post.observation,http.get.observation,auth.anonymous_write";
             default -> "http.fhir_probe";
         };

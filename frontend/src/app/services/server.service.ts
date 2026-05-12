@@ -2,7 +2,7 @@ import { HttpClient } from "@angular/common/http";
 import { Injectable } from "@angular/core";
 import { Observable } from "rxjs";
 import { environment } from "../../environments/environment";
-import { AddServerRequest, FhirServer } from "../models/server.model";
+import { AddServerRequest, FhirServer, ServerAuthNarrative } from "../models/server.model";
 
 @Injectable({
     providedIn: 'root'
@@ -22,5 +22,9 @@ export class ServerService {
 
     deleteServer(id: number): Observable<void> {
         return this.http.delete<void>(`${this.apiUrl}/${id}`);
+    }
+
+    getAuthNarrative(serverId: number): Observable<ServerAuthNarrative> {
+        return this.http.get<ServerAuthNarrative>(`${this.apiUrl}/${serverId}/auth-narrative`);
     }
 }
