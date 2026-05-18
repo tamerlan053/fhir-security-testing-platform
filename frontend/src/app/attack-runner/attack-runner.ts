@@ -341,16 +341,18 @@ export class AttackRunnerComponent implements OnInit {
     'Encoded Hidden Data',
   ];
 
-  /** Authentication (7–8). */
+  /** Authentication (7–9). */
   private readonly authScenarioNames = [
     'Invalid Credentials Access Test',
     'Open Endpoint Detection',
+    'Authenticated Token Isolation',
   ];
 
-  /** Authorization & unauthorized writes (9–10). */
+  /** Authorization & unauthorized writes (10–12). */
   private readonly accessControlScenarioNames = [
     'Cross-Patient Access',
     'Unauthorized Write / ID Tampering',
+    'Observation Bundle / Duplicate Clinical',
   ];
 
   servers: FhirServer[] = [];

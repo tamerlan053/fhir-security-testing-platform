@@ -3,7 +3,7 @@ package com.fhir.security.attack;
 /**
  * Heuristic classification of whether HTTP response bodies may expose implementation
  * or infrastructure details beyond a minimal client-facing error (Week 10).
- */
+ */     
 public enum LeakageExposure {
     /** Short or generic response; no suspicious patterns detected. */
     NONE,

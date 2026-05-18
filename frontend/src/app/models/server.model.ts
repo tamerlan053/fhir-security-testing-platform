@@ -9,7 +9,7 @@ export interface AddServerRequest {
     baseUrl: string;
 }
 
-/** Week 11: consolidated auth / isolation view per server (matches backend ServerAuthNarrativeResponse). */
+/** Consolidated auth / isolation view per server (matches backend ServerAuthNarrativeResponse). */
 export interface ServerAuthNarrative {
     serverId: number;
     serverName: string;
