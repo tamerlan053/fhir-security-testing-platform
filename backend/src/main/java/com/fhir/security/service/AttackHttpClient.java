@@ -15,14 +15,32 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 public class AttackHttpClient {
 
     private static final Logger log = LoggerFactory.getLogger(AttackHttpClient.class);
+    private static final int REQUEST_BODY_LOG_LIMIT = 12_000;
 
     private final RestTemplate restTemplate = new RestTemplate();
+    private final ThreadLocal<List<String>> requestTrace = ThreadLocal.withInitial(ArrayList::new);
+
+    /** Clears captured requests before running a single attack scenario. */
+    public void clearRequestTrace() {
+        requestTrace.get().clear();
+    }
+
+    /** Formatted HTTP request log for the current scenario (empty if none were captured). */
+    public String getRequestTrace() {
+        List<String> entries = requestTrace.get();
+        if (entries.isEmpty()) {
+            return "";
+        }
+        return String.join("\n\n---\n\n", entries);
+    }
 
     public HttpResult post(String url, String body) {
         return post(url, body, null);
@@ -36,6 +54,8 @@ public class AttackHttpClient {
                 url,
                 HttpMethod.POST,
                 headers,
+                body,
+                MediaType.APPLICATION_JSON,
                 request -> {
                     request.getHeaders().setContentType(MediaType.APPLICATION_JSON);
                     request.getBody().write(body.getBytes(StandardCharsets.UTF_8));
@@ -51,7 +71,7 @@ public class AttackHttpClient {
      * GET with optional extra headers (e.g. {@code Authorization: Bearer …}).
      */
     public HttpResult get(String url, HttpHeaders headers) {
-        return execute(url, HttpMethod.GET, headers, request -> {
+        return execute(url, HttpMethod.GET, headers, null, null, request -> {
             // No request body
         });
     }
@@ -68,6 +88,8 @@ public class AttackHttpClient {
                 url,
                 HttpMethod.PUT,
                 headers,
+                body,
+                MediaType.APPLICATION_JSON,
                 request -> {
                     request.getHeaders().setContentType(MediaType.APPLICATION_JSON);
                     if (body != null) {
@@ -77,7 +99,15 @@ public class AttackHttpClient {
         );
     }
 
-    private HttpResult execute(String url, HttpMethod method, HttpHeaders additionalHeaders, RequestCallback requestCallback) {
+    private HttpResult execute(
+            String url,
+            HttpMethod method,
+            HttpHeaders additionalHeaders,
+            String requestBody,
+            MediaType contentType,
+            RequestCallback requestCallback
+    ) {
+        recordRequest(method, url, additionalHeaders, requestBody, contentType);
         try {
             return restTemplate.execute(
                     URI.create(url),
@@ -127,6 +157,7 @@ public class AttackHttpClient {
      * POST with {@code application/x-www-form-urlencoded} body (OAuth token endpoint probes).
      */
     public HttpResult postUrlEncoded(String url, String formBody, HttpHeaders additionalHeaders) {
+        recordRequest(HttpMethod.POST, url, additionalHeaders, formBody, MediaType.APPLICATION_FORM_URLENCODED);
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
@@ -150,6 +181,38 @@ public class AttackHttpClient {
             log.warn("HTTP failed: {} - {}", url, e.getMessage());
             return new HttpResult(0, "Error: " + e.getMessage());
         }
+    }
+
+    private void recordRequest(
+            HttpMethod method,
+            String url,
+            HttpHeaders additionalHeaders,
+            String requestBody,
+            MediaType contentType
+    ) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(method.name()).append(' ').append(url).append('\n');
+        if (contentType != null) {
+            sb.append("Content-Type: ").append(contentType).append('\n');
+        }
+        if (additionalHeaders != null && !additionalHeaders.isEmpty()) {
+            additionalHeaders.forEach((name, values) -> {
+                for (String value : values) {
+                    sb.append(name).append(": ").append(value).append('\n');
+                }
+            });
+        }
+        if (requestBody != null && !requestBody.isBlank()) {
+            sb.append('\n').append(truncateForLog(requestBody));
+        }
+        requestTrace.get().add(sb.toString().stripTrailing());
+    }
+
+    private static String truncateForLog(String text) {
+        if (text.length() <= REQUEST_BODY_LOG_LIMIT) {
+            return text;
+        }
+        return text.substring(0, REQUEST_BODY_LOG_LIMIT) + "\n… [truncated]";
     }
 
     public record HttpResult(int statusCode, String responseBody) {}

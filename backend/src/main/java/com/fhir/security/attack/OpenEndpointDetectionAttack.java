@@ -69,7 +69,7 @@ public class OpenEndpointDetectionAttack implements ExecutableAttack {
         }
 
         if (code == 200 || code == 201) {
-            return AttackOutcome.misconfigured(
+            return AttackOutcome.vulnerable(
                     code,
                     detail,
                     "OAuth/SMART is advertised but unauthenticated Patient read succeeded (policy inconsistency).",

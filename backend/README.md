@@ -33,12 +33,6 @@ The server starts on **http://localhost:8080**.
 
 ## API Endpoints
 
-### Server registry (Week 11 auth narrative)
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/servers/{id}/auth-narrative` | Live OAuth/advertising + anonymous `/Patient` probe and excerpts from the latest stored run (cross-patient, open endpoint, token isolation, Observation bundle) |
-
 ### FHIR connection & resources
 
 Base path: `/api/fhir`

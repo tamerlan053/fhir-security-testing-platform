@@ -15,7 +15,6 @@
 | **SECURE** | Expected rejection or correct behavior for a "plain" request. |
 | **VULNERABLE** | Confirmed risk (counts toward vulnerability totals). |
 | **OPEN_POLICY** | Behavior matches explicit public/demo policy (OAuth not advertised in metadata). |
-| **MISCONFIGURED** | Advertised security (OAuth/SMART) is inconsistent with actual anonymous access. |
 | **INCONCLUSIVE** | No conclusion possible (error, incomplete setup, non-standard response). |
 
 **Note:** For OAuth-aware scenarios, the classifier compares request success with whether OAuth/SMART is advertised in the environment (see `AttackOutcome` in code).
@@ -34,7 +33,7 @@
 | 6 | Contained Resource Smuggling | 201 | VULNERABLE | yes | MEDIUM |
 | 7 | Encoded Hidden Data | 201 | SECURE | no | INFO |
 | 8 | Invalid Credentials Access Test | 200 | VULNERABLE | yes | HIGH |
-| 9 | Open Endpoint Detection | 200 | MISCONFIGURED | no | MEDIUM |
+| 9 | Open Endpoint Detection | 200 | VULNERABLE | yes | MEDIUM |
 | 10 | Cross-Patient Access | 200 | VULNERABLE | yes | HIGH |
 
 ---
@@ -560,9 +559,9 @@ Bearer variant → HTTP 200; Bearer variant → HTTP 200; Bearer variant → HTT
 
 ### 9. Open Endpoint Detection
 
-**Procedure:** GET `/.well-known/smart-configuration` and GET `/metadata` to infer whether OAuth/SMART is advertised; then unauthenticated GET `/Patient?_count=1`. If OAuth is advertised but Patient can be read without authorization → **MISCONFIGURED**; if not advertised and read succeeds → **OPEN_POLICY**.
+**Procedure:** GET `/.well-known/smart-configuration` and GET `/metadata` to infer whether OAuth/SMART is advertised; then unauthenticated GET `/Patient?_count=1`. If OAuth is advertised but Patient can be read without authorization → **VULNERABLE**; if not advertised and read succeeds → **OPEN_POLICY**.
 
-**Result (7):** HTTP **200**, **MISCONFIGURED**.
+**Result (7):** HTTP **200**, **VULNERABLE**.
 
 **Reason:** OAuth/SMART is advertised but unauthenticated Patient read succeeded (policy inconsistency).
 

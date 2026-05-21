@@ -13,6 +13,7 @@ import com.fhir.security.entity.TestRun;
 import com.fhir.security.repository.AttackScenarioRepository;
 import com.fhir.security.repository.TestResultRepository;
 import com.fhir.security.repository.TestRunRepository;
+import com.fhir.security.util.PostgresTextSanitizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -26,15 +27,18 @@ public class AttackExecutorService {
     private static final Logger log = LoggerFactory.getLogger(AttackExecutorService.class);
 
     private final AttackRegistry registry;
+    private final AttackHttpClient attackHttpClient;
     private final TestRunRepository testRunRepository;
     private final TestResultRepository testResultRepository;
     private final AttackScenarioRepository attackScenarioRepository;
 
     public AttackExecutorService(AttackRegistry registry,
+                                AttackHttpClient attackHttpClient,
                                 TestRunRepository testRunRepository,
                                 TestResultRepository testResultRepository,
                                 AttackScenarioRepository attackScenarioRepository) {
         this.registry = registry;
+        this.attackHttpClient = attackHttpClient;
         this.testRunRepository = testRunRepository;
         this.testResultRepository = testResultRepository;
         this.attackScenarioRepository = attackScenarioRepository;
@@ -46,7 +50,9 @@ public class AttackExecutorService {
         testRunRepository.save(run);
 
         for (ExecutableAttack scenario : registry.getScenarios()) {
+            attackHttpClient.clearRequestTrace();
             AttackResult raw = scenario.execute(server);
+            String requestLog = attackHttpClient.getRequestTrace();
             AttackResult enriched = enrichForPersistence(scenario, raw);
 
             AttackScenario entityScenario = attackScenarioRepository
@@ -63,7 +69,8 @@ public class AttackExecutorService {
             tr.setTestRun(run);
             tr.setScenario(entityScenario);
             tr.setStatusCode(enriched.statusCode());
-            tr.setResponseBody(enriched.responseBody());
+            tr.setRequestLog(PostgresTextSanitizer.sanitize(requestLog));
+            tr.setResponseBody(PostgresTextSanitizer.sanitize(enriched.responseBody()));
             tr.setClassification(enriched.classification());
             tr.setReason(enriched.reason());
             tr.setSeverity(enriched.severity());

@@ -14,7 +14,6 @@ import { formatApiError } from '../utils/error.utils';
     <div class="container">
       <h2>FHIR Server Management</h2>
       <div class="nav">
-        <a routerLink="/strategy" class="btn-strategy">Strategy</a>
         <a routerLink="/attacks">Run Security Tests →</a>
         <a routerLink="/compare">Compare servers →</a>
       </div>
@@ -60,15 +59,6 @@ import { formatApiError } from '../utils/error.utils';
     .nav { margin-bottom: 16px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
     .nav a { color: #1976d2; text-decoration: none; }
     .nav a:hover { text-decoration: underline; }
-    .btn-strategy {
-      display: inline-block;
-      padding: 6px 14px;
-      background: #1976d2;
-      color: #fff !important;
-      border-radius: 4px;
-      font-weight: 500;
-    }
-    .btn-strategy:hover { filter: brightness(1.08); text-decoration: none !important; }
     .form { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
     .form input { flex: 1; min-width: 200px; padding: 8px; }
     .form button { padding: 8px 16px; }

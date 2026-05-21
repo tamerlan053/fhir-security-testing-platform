@@ -2,11 +2,9 @@ package com.fhir.security.controller;
 
 import com.fhir.security.dto.request.AddServerRequest;
 import com.fhir.security.dto.response.FhirServerResponse;
-import com.fhir.security.dto.response.ServerAuthNarrativeResponse;
 import com.fhir.security.entity.FhirServer;
 import com.fhir.security.mapper.FhirServerMapper;
 import com.fhir.security.service.FhirServerService;
-import com.fhir.security.service.ServerAuthNarrativeService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,11 +21,9 @@ public class FhirServerController {
     private static final Logger log = LoggerFactory.getLogger(FhirServerController.class);
 
     private final FhirServerService fhirServerService;
-    private final ServerAuthNarrativeService serverAuthNarrativeService;
 
-    public FhirServerController(FhirServerService fhirServerService, ServerAuthNarrativeService serverAuthNarrativeService) {
+    public FhirServerController(FhirServerService fhirServerService) {
         this.fhirServerService = fhirServerService;
-        this.serverAuthNarrativeService = serverAuthNarrativeService;
     }
 
     @PostMapping
@@ -48,10 +44,5 @@ public class FhirServerController {
     public ResponseEntity<List<FhirServerResponse>> getAllServers() {
         List<FhirServer> servers = fhirServerService.getAllServers();
         return ResponseEntity.ok(servers.stream().map(FhirServerMapper::toResponse).toList());
-    }
-
-    @GetMapping("/{id}/auth-narrative")
-    public ResponseEntity<ServerAuthNarrativeResponse> getAuthNarrative(@PathVariable Long id) {
-        return ResponseEntity.ok(serverAuthNarrativeService.buildForServer(id));
     }
 }

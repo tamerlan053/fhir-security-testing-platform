@@ -36,6 +36,10 @@ public class TestResult {
     @Column(columnDefinition = "TEXT")
     private String responseBody;
 
+    /** Captured outbound HTTP request(s) for this scenario (method, URL, headers, body). */
+    @Column(name = "request_log", columnDefinition = "TEXT")
+    private String requestLog;
+
     /** Comma-separated stable tags for aggregation (e.g. http.post.patient,fhir.extension.covert_channel). */
     @Column(name = "attack_vector_ids", columnDefinition = "TEXT")
     private String attackVectorIds;
@@ -99,6 +103,18 @@ public class TestResult {
 
     public void setResponseBody(String responseBody) {
         this.responseBody = responseBody;
+    }
+
+    public String getRequestLog() {
+        return requestLog;
+    }
+
+    public void setRequestLog(String requestLog) {
+        this.requestLog = requestLog;
+    }
+
+    public String getRequestLogResolved() {
+        return requestLog != null ? requestLog : "";
     }
 
     public AttackClassification getClassification() {

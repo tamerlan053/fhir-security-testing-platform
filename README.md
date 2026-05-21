@@ -213,12 +213,11 @@ This project delivers a security research platform capable of automated vulnerab
 **Objective:** Close the remaining **authorization narrative** and the brief’s **clinical-content misuse** example, within ethical limits on public test servers.
 
 **Tasks:**
-- **Auth strategy summary** — One consolidated view (UI table or API) per server: open vs advertised OAuth/SMART vs other signals, using existing metadata + probe outcomes.
 - **Authenticated isolation (where possible)** — If a **lab** server and **test client credentials** are available via environment/config (no secrets in git): with a **valid** token, probe read/write **outside** the granted patient/context; otherwise record the scenario as **N/A** with a short justification (still honest relative to *“when authentication is present”*).
 - **Observation-oriented misuse** — Add or extend at least one scenario aligned with the brief (e.g. **Observation** chained to an existing `Patient`, or a **Bundle / transaction** path that tests whether **extra** clinical entries slip through policy), distinct from pure anonymous IDOR where you already have coverage.
 - **Backend unit tests (important only)** — Add focused unit tests for the Week 11 critical paths (new/updated attacks and classification rules), aiming to prevent false positives; not exhaustive coverage.
 
-**Deliverable:** Written or in-app narrative per server: **auth classification + whether cross-patient / escalation appeared under anonymous tests and, if applicable, under a test token.**
+**Deliverable:** Per-server auth/isolation outcomes visible via **attack scenarios** (Open Endpoint, Cross-Patient, Token Isolation, etc.) in the runner and compare views.
 
 > *"When authentication is present, the system evaluates whether access is correctly restricted… or whether privilege escalation or cross-patient access is possible."*
 

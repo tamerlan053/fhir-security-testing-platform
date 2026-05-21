@@ -122,7 +122,6 @@ import { formatApiError } from '../utils/error.utils';
     .hdr-name { font-weight: 600; }
     .hdr-meta, .hdr-stats { font-size: 0.8em; color: #555; margin-top: 4px; }
     .matrix td.cell-vulnerable { background: #ffebee; }
-    .matrix td.cell-misconfigured { background: #fff3e0; }
     .matrix td.cell-open-policy { background: #e3f2fd; }
     .matrix td.cell-inconclusive { background: #f5f5f5; }
     .matrix td.cell-secure { background: #e8f5e9; }
@@ -132,7 +131,6 @@ import { formatApiError } from '../utils/error.utils';
     .code { font-family: monospace; }
     .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.68rem; font-weight: 700; }
     .badge-vulnerable { background: #ffcdd2; color: #b71c1c; }
-    .badge-misconfigured { background: #ffe0b2; color: #e65100; }
     .badge-open-policy { background: #bbdefb; color: #0d47a1; }
     .badge-inconclusive { background: #eeeeee; color: #424242; }
     .badge-secure { background: #c8e6c9; color: #1b5e20; }
@@ -184,10 +182,12 @@ export class ServerCompareComponent implements OnInit {
     if (!cell.present) {
       return { 'missing-cell': true };
     }
-    const c = (cell.classification ?? (cell.vulnerable ? 'VULNERABLE' : 'SECURE')).toUpperCase();
+    let c = (cell.classification ?? (cell.vulnerable ? 'VULNERABLE' : 'SECURE')).toUpperCase();
+    if (c === 'MISCONFIGURED') {
+      c = 'VULNERABLE';
+    }
     return {
       'cell-vulnerable': c === 'VULNERABLE',
-      'cell-misconfigured': c === 'MISCONFIGURED',
       'cell-open-policy': c === 'OPEN_POLICY',
       'cell-inconclusive': c === 'INCONCLUSIVE',
       'cell-secure': c === 'SECURE',
@@ -203,10 +203,13 @@ export class ServerCompareComponent implements OnInit {
   }
 
   badgeClass(cell: CompareCell): Record<string, boolean> {
-    const key = (cell.classification ?? (cell.vulnerable ? 'VULNERABLE' : 'SECURE')).toLowerCase().replace(/_/g, '-');
+    let c = cell.classification ?? (cell.vulnerable ? 'VULNERABLE' : 'SECURE');
+    if (c.toUpperCase() === 'MISCONFIGURED') {
+      c = 'VULNERABLE';
+    }
+    const key = c.toLowerCase().replace(/_/g, '-');
     return {
       'badge-vulnerable': key === 'vulnerable',
-      'badge-misconfigured': key === 'misconfigured',
       'badge-open-policy': key === 'open-policy',
       'badge-inconclusive': key === 'inconclusive',
       'badge-secure': key === 'secure',

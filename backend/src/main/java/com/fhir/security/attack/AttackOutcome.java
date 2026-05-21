@@ -37,16 +37,6 @@ public final class AttackOutcome {
         );
     }
 
-    public static AttackResult misconfigured(int statusCode, String responseBody, String reason, AttackSeverity severity) {
-        return AttackResult.of(
-                statusCode,
-                responseBody,
-                AttackClassification.MISCONFIGURED,
-                reason,
-                severity
-        );
-    }
-
     public static AttackResult inconclusive(int statusCode, String responseBody, String reason) {
         return AttackResult.of(
                 statusCode,
@@ -317,8 +307,7 @@ public final class AttackOutcome {
 
     private static int priority(AttackClassification c) {
         return switch (c) {
-            case VULNERABLE -> 5;
-            case MISCONFIGURED -> 4;
+            case VULNERABLE -> 4;
             case INCONCLUSIVE -> 3;
             case OPEN_POLICY -> 2;
             case SECURE -> 1;

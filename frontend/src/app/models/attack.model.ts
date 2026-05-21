@@ -2,7 +2,6 @@ export type AttackClassification =
   | 'SECURE'
   | 'VULNERABLE'
   | 'OPEN_POLICY'
-  | 'MISCONFIGURED'
   | 'INCONCLUSIVE';
 
 export type LeakageExposure = 'NONE' | 'VERBOSE_ERROR_BODY' | 'IMPLEMENTATION_DETAIL_LEAK';
@@ -16,6 +15,8 @@ export interface TestResult {
   classification: AttackClassification;
   reason: string;
   severity: string;
+  /** Outbound HTTP request log (method, URL, headers, body). */
+  requestDetails: string;
   responseBody: string;
   /** Comma-separated stable probe tags from the backend catalog (Week 10). */
   attackVectorIds: string;

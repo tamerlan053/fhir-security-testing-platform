@@ -8,6 +8,7 @@ public record TestResultResponse(
         String classification,
         String reason,
         String severity,
+        String requestDetails,
         String responseBody,
         String attackVectorIds,
         String leakageExposure

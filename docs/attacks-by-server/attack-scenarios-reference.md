@@ -194,7 +194,7 @@ Same `GET` URLs with header:
 | **Display name** | `Open Endpoint Detection` |
 | **Java class** | `OpenEndpointDetectionAttack` |
 | **Order** | 80 |
-| **Intent** | Compare **advertised OAuth/SMART** (from well-known + CapabilityStatement) with **unauthenticated** `GET /Patient?_count=1`. Mismatch → **MISCONFIGURED** or **OPEN_POLICY** / **SECURE** depending on metadata. |
+| **Intent** | Compare **advertised OAuth/SMART** (from well-known + CapabilityStatement) with **unauthenticated** `GET /Patient?_count=1`. Mismatch → **VULNERABLE** or **OPEN_POLICY** / **SECURE** depending on metadata. |
 
 **Requests**
 
@@ -207,7 +207,7 @@ Same `GET` URLs with header:
 No `Authorization` header on any call.
 
 **Classification**  
-Logic in `OpenEndpointDetectionAttack`: if OAuth advertised and Patient read returns **200/201** → **MISCONFIGURED**; if not advertised and **200/201** → **OPEN_POLICY**; **401/403** on read with advertised OAuth → **SECURE**; etc.
+Logic in `OpenEndpointDetectionAttack`: if OAuth advertised and Patient read returns **200/201** → **VULNERABLE**; if not advertised and **200/201** → **OPEN_POLICY**; **401/403** on read with advertised OAuth → **SECURE**; etc.
 
 ---
 

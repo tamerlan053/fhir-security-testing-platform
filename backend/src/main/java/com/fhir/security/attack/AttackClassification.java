@@ -11,8 +11,6 @@ public enum AttackClassification {
     VULNERABLE,
     /** Matches intentional public/demo policy (e.g. anonymous read on sandbox). */
     OPEN_POLICY,
-    /** Advertised security (e.g. OAuth) inconsistent with observed access. */
-    MISCONFIGURED,
     /** Cannot determine (errors, incomplete setup, or not applicable). */
     INCONCLUSIVE
 }

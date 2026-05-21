@@ -71,7 +71,6 @@ import { formatApiError } from '../utils/error.utils';
             <option value="SECURE">SECURE</option>
             <option value="VULNERABLE">VULNERABLE</option>
             <option value="OPEN_POLICY">OPEN_POLICY</option>
-            <option value="MISCONFIGURED">MISCONFIGURED</option>
             <option value="INCONCLUSIVE">INCONCLUSIVE</option>
           </select>
           <select id="leak-filter" [(ngModel)]="leakageFilter">
@@ -293,12 +292,10 @@ import { formatApiError } from '../utils/error.utils';
     .sev { font-size: 0.72rem; color: #616161; font-weight: 600; }
     .reason { font-size: 0.82em; color: #444; margin-top: 6px; line-height: 1.35; max-width: 480px; }
     .badge-vulnerable { background: #ffcdd2; color: #b71c1c; }
-    .badge-misconfigured { background: #ffe0b2; color: #e65100; }
     .badge-open-policy { background: #bbdefb; color: #0d47a1; }
     .badge-inconclusive { background: #eeeeee; color: #424242; }
     .badge-secure { background: #c8e6c9; color: #1b5e20; }
     .row-vulnerable { background: #fff5f5; border-left: 4px solid #c62828; }
-    .row-misconfigured { background: #fff8f0; border-left: 4px solid #ef6c00; }
     .row-open-policy { background: #f3f9ff; border-left: 4px solid #1565c0; }
     .row-inconclusive { background: #fafafa; border-left: 4px solid #9e9e9e; }
     .row-secure { background: #f4fbf4; border-left: 4px solid #2e7d32; }
@@ -584,11 +581,15 @@ export class AttackRunnerComponent implements OnInit {
     };
   }
 
-  resultRowClass(r: TestResult): Record<string, boolean> {
+  private normalizedClassification(r: TestResult): string {
     const c = r.classification ?? (r.vulnerable ? 'VULNERABLE' : 'SECURE');
+    return c === 'MISCONFIGURED' ? 'VULNERABLE' : c;
+  }
+
+  resultRowClass(r: TestResult): Record<string, boolean> {
+    const c = this.normalizedClassification(r);
     return {
       'row-vulnerable': c === 'VULNERABLE',
-      'row-misconfigured': c === 'MISCONFIGURED',
       'row-open-policy': c === 'OPEN_POLICY',
       'row-inconclusive': c === 'INCONCLUSIVE',
       'row-secure': c === 'SECURE',
@@ -596,10 +597,9 @@ export class AttackRunnerComponent implements OnInit {
   }
 
   badgeClass(r: TestResult): Record<string, boolean> {
-    const key = (r.classification ?? (r.vulnerable ? 'VULNERABLE' : 'SECURE')).toLowerCase().replace(/_/g, '-');
+    const key = this.normalizedClassification(r).toLowerCase().replace(/_/g, '-');
     return {
       'badge-vulnerable': key === 'vulnerable',
-      'badge-misconfigured': key === 'misconfigured',
       'badge-open-policy': key === 'open-policy',
       'badge-inconclusive': key === 'inconclusive',
       'badge-secure': key === 'secure',

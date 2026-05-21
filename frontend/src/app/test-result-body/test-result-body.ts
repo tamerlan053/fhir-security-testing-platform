@@ -19,7 +19,6 @@ import { formatApiError } from '../utils/error.utils';
       <p *ngIf="errorMessage" class="error">{{ errorMessage }}</p>
 
       <div *ngIf="result as r" class="panel">
-        <h2>Response body</h2>
         <p class="meta">
           <strong>{{ r.scenarioName }}</strong>
           · HTTP {{ r.statusCode }}
@@ -28,9 +27,19 @@ import { formatApiError } from '../utils/error.utils';
         </p>
         <p class="meta muted" *ngIf="r.attackVectorIds">Vectors: <span class="mono">{{ r.attackVectorIds }}</span></p>
         <p class="meta muted" *ngIf="r.leakageExposure">Leakage: {{ r.leakageExposure }}</p>
+
+        <h2>Request</h2>
+        <div class="actions">
+          <button type="button" class="btn-secondary" (click)="copyRequest()" [disabled]="!r.requestDetails">
+            Copy request
+          </button>
+        </div>
+        <pre class="body-block request-block">{{ r.requestDetails || requestUnavailableMessage }}</pre>
+
+        <h2>Response body</h2>
         <div class="actions">
           <button type="button" class="btn-secondary" (click)="copyBody()" [disabled]="!r.responseBody">
-            Copy to clipboard
+            Copy response
           </button>
         </div>
         <p *ngIf="copyMessage" class="success">{{ copyMessage }}</p>
@@ -47,6 +56,9 @@ import { formatApiError } from '../utils/error.utils';
     .error { color: #c62828; }
     .success { color: #2e7d32; font-size: 0.9em; }
     .panel { margin-top: 8px; }
+    .panel h2 { margin: 20px 0 8px; font-size: 1.1rem; }
+    .panel h2:first-of-type { margin-top: 12px; }
+    .request-block { max-height: 45vh; }
     .meta { margin: 6px 0; line-height: 1.4; }
     .mono { font-family: monospace; font-size: 0.88em; }
     .actions { margin: 12px 0; }
@@ -69,6 +81,9 @@ import { formatApiError } from '../utils/error.utils';
   `],
 })
 export class TestResultBodyComponent implements OnInit {
+  readonly requestUnavailableMessage =
+    '(not recorded — run the security test again to capture the outbound HTTP request)';
+
   result: TestResult | null = null;
   loading = true;
   errorMessage = '';
@@ -105,6 +120,7 @@ export class TestResultBodyComponent implements OnInit {
       next: (r) => {
         this.result = {
           ...r,
+          requestDetails: r.requestDetails ?? '',
           attackVectorIds: r.attackVectorIds ?? '',
           leakageExposure: (r.leakageExposure ?? 'NONE') as LeakageExposure,
         };
@@ -119,15 +135,22 @@ export class TestResultBodyComponent implements OnInit {
     });
   }
 
+  copyRequest(): void {
+    this.copyToClipboard(this.result?.requestDetails ?? '', 'Request copied.');
+  }
+
   copyBody(): void {
-    const text = this.result?.responseBody ?? '';
+    this.copyToClipboard(this.result?.responseBody ?? '', 'Response copied.');
+  }
+
+  private copyToClipboard(text: string, successMessage: string): void {
     if (!text) {
       return;
     }
     this.copyMessage = '';
     navigator.clipboard.writeText(text).then(
       () => {
-        this.copyMessage = 'Copied.';
+        this.copyMessage = successMessage;
         this.cdr.detectChanges();
       },
       () => {

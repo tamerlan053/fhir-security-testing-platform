@@ -111,6 +111,7 @@ public class TestResultController {
                 c.name(),
                 tr.getReasonResolved(),
                 tr.getSeverityResolved().name(),
+                tr.getRequestLogResolved(),
                 tr.getResponseBody(),
                 tr.getAttackVectorIdsResolved(),
                 tr.getLeakageExposureResolved().name()
