@@ -51,6 +51,7 @@ systemctl enable fhir-backend
 systemctl restart fhir-backend
 
 # Frontend build
+rm -rf "${FHIR_ROOT}/frontend-src"
 mkdir -p "${FHIR_ROOT}/frontend-src"
 tar -xzf "${FHIR_ROOT}/frontend.tgz" -C "${FHIR_ROOT}/frontend-src"
 cd "${FHIR_ROOT}/frontend-src"

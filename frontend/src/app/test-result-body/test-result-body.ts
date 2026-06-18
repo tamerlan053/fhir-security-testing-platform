@@ -143,20 +143,44 @@ export class TestResultBodyComponent implements OnInit {
     this.copyToClipboard(this.result?.responseBody ?? '', 'Response copied.');
   }
 
-  private copyToClipboard(text: string, successMessage: string): void {
+  private async copyToClipboard(text: string, successMessage: string): Promise<void> {
     if (!text) {
       return;
     }
     this.copyMessage = '';
-    navigator.clipboard.writeText(text).then(
-      () => {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        this.fallbackCopyToClipboard(text);
+      }
+      this.copyMessage = successMessage;
+    } catch {
+      try {
+        this.fallbackCopyToClipboard(text);
         this.copyMessage = successMessage;
-        this.cdr.detectChanges();
-      },
-      () => {
-        this.copyMessage = 'Copy failed (browser permission).';
-        this.cdr.detectChanges();
-      },
-    );
+      } catch {
+        this.copyMessage = 'Copy failed — select the text below and press Ctrl+C.';
+      }
+    }
+    this.cdr.detectChanges();
+  }
+
+  /** Works on plain HTTP where Clipboard API is blocked (e.g. deployed app on :8888). */
+  private fallbackCopyToClipboard(text: string): void {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-9999px';
+    textarea.style.top = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    textarea.setSelectionRange(0, text.length);
+    const ok = document.execCommand('copy');
+    document.body.removeChild(textarea);
+    if (!ok) {
+      throw new Error('execCommand(copy) returned false');
+    }
   }
 }

@@ -581,13 +581,8 @@ export class AttackRunnerComponent implements OnInit {
     };
   }
 
-  private normalizedClassification(r: TestResult): string {
-    const c = r.classification ?? (r.vulnerable ? 'VULNERABLE' : 'SECURE');
-    return c === 'MISCONFIGURED' ? 'VULNERABLE' : c;
-  }
-
   resultRowClass(r: TestResult): Record<string, boolean> {
-    const c = this.normalizedClassification(r);
+    const c = r.classification ?? (r.vulnerable ? 'VULNERABLE' : 'SECURE');
     return {
       'row-vulnerable': c === 'VULNERABLE',
       'row-open-policy': c === 'OPEN_POLICY',
@@ -597,7 +592,7 @@ export class AttackRunnerComponent implements OnInit {
   }
 
   badgeClass(r: TestResult): Record<string, boolean> {
-    const key = this.normalizedClassification(r).toLowerCase().replace(/_/g, '-');
+    const key = (r.classification ?? (r.vulnerable ? 'VULNERABLE' : 'SECURE')).toLowerCase().replace(/_/g, '-');
     return {
       'badge-vulnerable': key === 'vulnerable',
       'badge-open-policy': key === 'open-policy',

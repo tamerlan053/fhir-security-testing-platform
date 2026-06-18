@@ -24,6 +24,7 @@ public class AttackHttpClient {
 
     private static final Logger log = LoggerFactory.getLogger(AttackHttpClient.class);
     private static final int REQUEST_BODY_LOG_LIMIT = 12_000;
+    private static final MediaType FHIR_JSON = MediaType.parseMediaType("application/fhir+json");
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final ThreadLocal<List<String>> requestTrace = ThreadLocal.withInitial(ArrayList::new);
@@ -72,7 +73,7 @@ public class AttackHttpClient {
      */
     public HttpResult get(String url, HttpHeaders headers) {
         return execute(url, HttpMethod.GET, headers, null, null, request -> {
-            // No request body
+            request.getHeaders().setAccept(List.of(FHIR_JSON));
         });
     }
 
@@ -192,6 +193,9 @@ public class AttackHttpClient {
     ) {
         StringBuilder sb = new StringBuilder();
         sb.append(method.name()).append(' ').append(url).append('\n');
+        if (method == HttpMethod.GET) {
+            sb.append("Accept: ").append(FHIR_JSON).append('\n');
+        }
         if (contentType != null) {
             sb.append("Content-Type: ").append(contentType).append('\n');
         }
