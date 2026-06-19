@@ -46,14 +46,22 @@ public class ExtensionFieldsMisuseAttack implements ExecutableAttack {
         int code = httpResult.statusCode();
         String body = httpResult.responseBody();
 
+        if (BehavioralProbeUtils.isDuplicateResourceError(body)) {
+            return AttackOutcome.duplicateResourceInconclusive(code, body, "extension covert channel probe");
+        }
         if (code == 401 || code == 403) {
-            return AttackOutcome.secure(code, body, "Write rejected without authorization.");
+            return AttackOutcome.secure(code, body,
+                    "Extension covert channel: write rejected without authorization. "
+                            + "Validation reached: NO. Rejection reason: authentication.");
         }
         if (code == 400 || code == 404 || code == 405 || code == 412 || code == 422) {
-            return AttackOutcome.secure(code, body, "Server rejected the payload (no covert channel persistence).");
+            return AttackOutcome.secure(code, body,
+                    "Extension covert channel: server rejected the payload (no covert channel persistence). "
+                            + "Validation reached: YES. Rejection reason: payload validation.");
         }
         if (code == 500) {
-            return AttackOutcome.inconclusive(code, body, "Server error during extension persistence probe.");
+            return AttackOutcome.inconclusive(code, body,
+                    "Extension covert channel: server error. Validation reached: UNKNOWN.");
         }
 
         if (code == 200 || code == 201) {
@@ -79,24 +87,28 @@ public class ExtensionFieldsMisuseAttack implements ExecutableAttack {
                 return AttackOutcome.inconclusive(
                         code,
                         combined,
-                        "POST succeeded but follow-up GET requires authorization; cannot confirm whether marker persisted."
+                        "Extension covert channel: POST succeeded but follow-up GET requires authorization; cannot confirm persistence. "
+                                + "Validation reached: YES. Rejection reason: authorization on read."
                 );
             }
             if (persisted) {
                 return AttackOutcome.vulnerable(
                         code,
                         combined,
-                        "Custom extension marker persisted and is retrievable (potential covert storage channel).",
+                        "Extension covert channel: custom extension marker persisted and is retrievable (potential covert storage channel). "
+                                + "Validation reached: YES. Rejection reason: none (payload accepted).",
                         AttackSeverity.MEDIUM
                 );
             }
             return AttackOutcome.secure(
                     code,
                     combined,
-                    "Extension marker was not present on follow-up GET (server likely sanitized/ignored or did not persist it)."
+                    "Extension covert channel: marker was not present on follow-up GET (server likely sanitized/ignored or did not persist it). "
+                            + "Validation reached: YES. Rejection reason: sanitization."
             );
         }
 
-        return AttackOutcome.inconclusive(code, body, "Unexpected status on extension persistence probe: " + code);
+        return AttackOutcome.inconclusive(code, body,
+                "Extension covert channel: unexpected status: " + code + ". Validation reached: UNKNOWN.");
     }
 }

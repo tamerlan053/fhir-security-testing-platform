@@ -54,14 +54,22 @@ public class ContainedResourceSmugglingAttack implements ExecutableAttack {
         int code = httpResult.statusCode();
         String body = httpResult.responseBody();
 
+        if (BehavioralProbeUtils.isDuplicateResourceError(body)) {
+            return AttackOutcome.duplicateResourceInconclusive(code, body, "contained Binary smuggling probe");
+        }
         if (code == 401 || code == 403) {
-            return AttackOutcome.secure(code, body, "Write rejected without authorization.");
+            return AttackOutcome.secure(code, body,
+                    "Contained Binary smuggling: write rejected without authorization. "
+                            + "Validation reached: NO. Rejection reason: authentication.");
         }
         if (code == 400 || code == 404 || code == 405 || code == 412 || code == 422) {
-            return AttackOutcome.secure(code, body, "Server rejected the payload (no contained-resource persistence).");
+            return AttackOutcome.secure(code, body,
+                    "Contained Binary smuggling: server rejected the payload (no contained-resource persistence). "
+                            + "Validation reached: YES. Rejection reason: payload validation.");
         }
         if (code == 500) {
-            return AttackOutcome.inconclusive(code, body, "Server error during contained Binary persistence probe.");
+            return AttackOutcome.inconclusive(code, body,
+                    "Contained Binary smuggling: server error. Validation reached: UNKNOWN.");
         }
 
         if (code == 200 || code == 201) {
@@ -88,7 +96,8 @@ public class ContainedResourceSmugglingAttack implements ExecutableAttack {
                 return AttackOutcome.inconclusive(
                         code,
                         combined,
-                        "POST succeeded but follow-up GET requires authorization; cannot confirm whether contained Binary persisted."
+                        "Contained Binary smuggling: POST succeeded but follow-up GET requires authorization; cannot confirm persistence. "
+                                + "Validation reached: YES. Rejection reason: authorization on read."
                 );
             }
 
@@ -96,17 +105,20 @@ public class ContainedResourceSmugglingAttack implements ExecutableAttack {
                 return AttackOutcome.vulnerable(
                         code,
                         combined,
-                        "Contained Binary marker persisted and is retrievable (potential nested payload smuggling channel).",
+                        "Contained Binary smuggling: marker persisted and is retrievable (potential nested payload smuggling channel). "
+                                + "Validation reached: YES. Rejection reason: none (payload accepted).",
                         AttackSeverity.MEDIUM
                 );
             }
             return AttackOutcome.secure(
                     code,
                     combined,
-                    "Contained Binary marker was not present on follow-up GET (server likely stripped/ignored contained content)."
+                    "Contained Binary smuggling: marker was not present on follow-up GET (server likely stripped/ignored contained content). "
+                            + "Validation reached: YES. Rejection reason: sanitization."
             );
         }
 
-        return AttackOutcome.inconclusive(code, body, "Unexpected status on contained Binary persistence probe: " + code);
+        return AttackOutcome.inconclusive(code, body,
+                "Contained Binary smuggling: unexpected status: " + code + ". Validation reached: UNKNOWN.");
     }
 }

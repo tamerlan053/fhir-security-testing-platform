@@ -35,25 +35,40 @@ public class UnexpectedPayloadInjectionAttack implements ExecutableAttack {
         String base = AuthProbeUtils.normalizeBase(server.getBaseUrl());
         String url = base + "/Patient";
 
+        // Each probe gets a unique family name + identifier to prevent HAPI-2840 duplicate rejection.
         String marker1 = "inj-unknown-" + UUID.randomUUID().toString().replace("-", "").substring(0, 10);
+        String family1 = "InjProbe1-" + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
         AttackHttpClient.HttpResult r1 = httpClient.post(
                 url,
-                "{\"resourceType\":\"Patient\",\"name\":[{\"family\":\"Test\"}],"
-                        + "\"unknownField\":\"" + marker1 + "\",\"__proto__\":{\"polluted\":\"" + marker1 + "\"}}"
+                "{\"resourceType\":\"Patient\","
+                        + "\"name\":[{\"family\":\"" + family1 + "\",\"given\":[\"" + marker1 + "\"]}],"
+                        + "\"identifier\":[{\"system\":\"urn:probe\",\"value\":\"" + marker1 + "\"}],"
+                        + "\"unknownField\":\"" + marker1 + "\","
+                        + "\"__proto__\":{\"polluted\":\"" + marker1 + "\"}}"
         );
         AttackResult a1 = classifyInjectedPersistence(base, r1, marker1, "unknownField/__proto__ injection");
 
+        // Duplicate key probe: use a unique family name; the injected duplicate id is the attack payload.
+        String dupFamily = "DupKey-" + UUID.randomUUID().toString().replace("-", "").substring(0, 10);
+        String dupId = "dup-" + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
         AttackHttpClient.HttpResult r2 = httpClient.post(
                 url,
-                "{\"resourceType\":\"Patient\",\"id\":\"valid-id\",\"id\":\"duplicate-id\"}"
+                "{\"resourceType\":\"Patient\","
+                        + "\"name\":[{\"family\":\"" + dupFamily + "\"}],"
+                        + "\"id\":\"valid-" + dupId + "\","
+                        + "\"id\":\"duplicate-" + dupId + "\"}"
         );
-        AttackResult a2 = classifyDuplicateKeyProbe(base, r2);
+        AttackResult a2 = classifyDuplicateKeyProbe(base, r2, "duplicate-" + dupId);
 
         String marker3 = "inj-nested-" + UUID.randomUUID().toString().replace("-", "").substring(0, 10);
+        String family3 = "InjProbe3-" + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
         AttackHttpClient.HttpResult r3 = httpClient.post(
                 url,
-                "{\"resourceType\":\"Patient\",\"name\":[{\"family\":\"Test\"}],"
-                        + "\"_payload\":\"" + marker3 + "\",\"extraNested\":{\"secret\":\"" + marker3 + "\"}}"
+                "{\"resourceType\":\"Patient\","
+                        + "\"name\":[{\"family\":\"" + family3 + "\",\"given\":[\"" + marker3 + "\"]}],"
+                        + "\"identifier\":[{\"system\":\"urn:probe\",\"value\":\"" + marker3 + "\"}],"
+                        + "\"_payload\":\"" + marker3 + "\","
+                        + "\"extraNested\":{\"secret\":\"" + marker3 + "\"}}"
         );
         AttackResult a3 = classifyInjectedPersistence(base, r3, marker3, "_payload/extraNested injection");
 
@@ -64,14 +79,20 @@ public class UnexpectedPayloadInjectionAttack implements ExecutableAttack {
         int code = post.statusCode();
         String body = post.responseBody();
 
+        if (BehavioralProbeUtils.isDuplicateResourceError(body)) {
+            return AttackOutcome.duplicateResourceInconclusive(code, body, label);
+        }
         if (code == 401 || code == 403) {
-            return AttackOutcome.secure(code, body, label + ": write rejected without authorization.");
+            return AttackOutcome.secure(code, body,
+                    label + ": write rejected without authorization. Validation reached: NO. Rejection reason: authentication.");
         }
         if (code == 400 || code == 404 || code == 405 || code == 412 || code == 422) {
-            return AttackOutcome.secure(code, body, label + ": server rejected the payload.");
+            return AttackOutcome.secure(code, body,
+                    label + ": server rejected the payload. Validation reached: YES. Rejection reason: payload validation.");
         }
         if (code == 500) {
-            return AttackOutcome.inconclusive(code, body, label + ": server error; cannot assess parsing/persistence.");
+            return AttackOutcome.inconclusive(code, body,
+                    label + ": server error; cannot assess parsing/persistence. Validation reached: UNKNOWN.");
         }
 
         if (code == 200 || code == 201) {
@@ -86,7 +107,15 @@ public class UnexpectedPayloadInjectionAttack implements ExecutableAttack {
 
             AttackHttpClient.HttpResult get = httpClient.get(base + "/Patient/" + createdId);
             String getBody = get.responseBody();
-            boolean persisted = BehavioralProbeUtils.containsIgnoreCase(getBody, marker);
+
+            // Detect persistence by checking for the malicious field NAMES in the GET response,
+            // not the marker value. The marker also appears in legitimate fields (name.given,
+            // identifier.value), so containsIgnoreCase(getBody, marker) always returns true and
+            // would produce a false positive. Only the survival of the field names is meaningful.
+            boolean persisted = BehavioralProbeUtils.containsIgnoreCase(getBody, "\"unknownField\"")
+                    || BehavioralProbeUtils.containsIgnoreCase(getBody, "\"__proto__\"")
+                    || BehavioralProbeUtils.containsIgnoreCase(getBody, "\"_payload\"")
+                    || BehavioralProbeUtils.containsIgnoreCase(getBody, "\"extraNested\"");
 
             String combined = ""
                     + label + " POST (HTTP " + code + "):\n"
@@ -98,7 +127,8 @@ public class UnexpectedPayloadInjectionAttack implements ExecutableAttack {
                 return AttackOutcome.inconclusive(
                         code,
                         combined,
-                        label + ": follow-up GET requires authorization; cannot confirm persistence of injected fields."
+                        label + ": follow-up GET requires authorization; cannot confirm persistence of injected fields. "
+                                + "Validation reached: YES. Rejection reason: authorization on read."
                 );
             }
 
@@ -106,7 +136,8 @@ public class UnexpectedPayloadInjectionAttack implements ExecutableAttack {
                 return AttackOutcome.vulnerable(
                         code,
                         combined,
-                        label + ": injected marker persisted and is retrievable (over-permissive parsing/persistence).",
+                        label + ": malicious field name(s) survived in GET response (unknownField / __proto__ / _payload / extraNested). "
+                                + "Validation reached: YES. Rejection reason: none (payload accepted).",
                         AttackSeverity.MEDIUM
                 );
             }
@@ -114,32 +145,40 @@ public class UnexpectedPayloadInjectionAttack implements ExecutableAttack {
             return AttackOutcome.secure(
                     code,
                     combined,
-                    label + ": marker not present on follow-up GET (server likely ignored/stripped unexpected fields)."
+                    label + ": malicious field names absent from GET response — server stripped unknown fields as expected. "
+                            + "Validation reached: YES. Rejection reason: sanitization."
             );
         }
 
-        return AttackOutcome.inconclusive(code, body, label + ": unexpected HTTP status: " + code);
+        return AttackOutcome.inconclusive(code, body,
+                label + ": unexpected HTTP status: " + code + ". Validation reached: UNKNOWN.");
     }
 
-    private AttackResult classifyDuplicateKeyProbe(String base, AttackHttpClient.HttpResult post) {
+    private AttackResult classifyDuplicateKeyProbe(String base, AttackHttpClient.HttpResult post, String duplicateIdValue) {
         int code = post.statusCode();
         String body = post.responseBody();
 
+        if (BehavioralProbeUtils.isDuplicateResourceError(body)) {
+            return AttackOutcome.duplicateResourceInconclusive(code, body, "duplicate key probe");
+        }
         if (code == 401 || code == 403) {
-            return AttackOutcome.secure(code, body, "Duplicate key: write rejected without authorization.");
+            return AttackOutcome.secure(code, body,
+                    "Duplicate key: write rejected without authorization. Validation reached: NO. Rejection reason: authentication.");
         }
         if (code == 400 || code == 404 || code == 405 || code == 412 || code == 422) {
-            return AttackOutcome.secure(code, body, "Duplicate key: server rejected ambiguous JSON as expected.");
+            return AttackOutcome.secure(code, body,
+                    "Duplicate key: server rejected ambiguous JSON as expected. Validation reached: YES. Rejection reason: payload validation.");
         }
         if (code == 500) {
-            return AttackOutcome.inconclusive(code, body, "Duplicate key: server error.");
+            return AttackOutcome.inconclusive(code, body,
+                    "Duplicate key: server error. Validation reached: UNKNOWN.");
         }
 
         if (code == 200 || code == 201) {
-            // This is an ambiguity/protocol-hardening check. Treat as low severity unless we can show persistence effects.
             String createdId = FhirResourceIdExtractor.extractId(body);
             if (createdId == null) {
-                return AttackOutcome.inconclusive(code, body, "Duplicate key: 2xx returned but no id; cannot verify behavior.");
+                return AttackOutcome.inconclusive(code, body,
+                        "Duplicate key: 2xx returned but no id; cannot verify behavior. Validation reached: YES.");
             }
 
             AttackHttpClient.HttpResult get = httpClient.get(base + "/Patient/" + createdId);
@@ -149,12 +188,13 @@ public class UnexpectedPayloadInjectionAttack implements ExecutableAttack {
                     + "\n\nFollow-up GET /Patient/{id} (HTTP " + get.statusCode() + "):\n"
                     + AuthProbeUtils.truncate(get.responseBody(), 1500);
 
-            if (BehavioralProbeUtils.containsIgnoreCase(body, "\"id\":\"duplicate-id\"")
-                    || BehavioralProbeUtils.containsIgnoreCase(get.responseBody(), "\"id\":\"duplicate-id\"")) {
+            if (BehavioralProbeUtils.containsIgnoreCase(body, duplicateIdValue)
+                    || BehavioralProbeUtils.containsIgnoreCase(get.responseBody(), duplicateIdValue)) {
                 return AttackOutcome.vulnerable(
                         code,
                         combined,
-                        "Duplicate key: server accepted ambiguous JSON and reflected the last-seen id value.",
+                        "Duplicate key: server accepted ambiguous JSON and reflected the last-seen id value. "
+                                + "Validation reached: YES. Rejection reason: none (payload accepted).",
                         AttackSeverity.LOW
                 );
             }
@@ -162,10 +202,12 @@ public class UnexpectedPayloadInjectionAttack implements ExecutableAttack {
             return AttackOutcome.secure(
                     code,
                     combined,
-                    "Duplicate key: request succeeded but server did not reflect the ambiguous client id; no clear persistence impact observed."
+                    "Duplicate key: request succeeded but server did not reflect the ambiguous client id; no clear persistence impact observed. "
+                            + "Validation reached: YES. Rejection reason: sanitization."
             );
         }
 
-        return AttackOutcome.inconclusive(code, body, "Duplicate key: unexpected HTTP status: " + code);
+        return AttackOutcome.inconclusive(code, body,
+                "Duplicate key: unexpected HTTP status: " + code + ". Validation reached: UNKNOWN.");
     }
 }

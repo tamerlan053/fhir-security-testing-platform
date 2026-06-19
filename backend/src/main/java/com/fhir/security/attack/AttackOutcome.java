@@ -48,6 +48,20 @@ public final class AttackOutcome {
     }
 
     /**
+     * Server rejected the request as a duplicate resource (e.g. HAPI-2840) before payload validation
+     * could occur. This is NOT a SECURE result — the malicious payload was never evaluated.
+     */
+    public static AttackResult duplicateResourceInconclusive(int statusCode, String responseBody, String probe) {
+        return inconclusive(
+                statusCode,
+                responseBody,
+                probe + ": [INCONCLUSIVE] Server rejected as duplicate resource (HAPI-2840 or equivalent) "
+                        + "before payload validation — randomisation failure or server deduplication on non-name fields. "
+                        + "Rejection reason: duplicate resource. Validation reached: NO."
+        );
+    }
+
+    /**
      * Invalid / malformed FHIR body on POST (validation attacks).
      */
     public static AttackResult validationPost(int statusCode, String responseBody) {

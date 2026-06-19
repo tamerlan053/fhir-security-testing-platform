@@ -43,4 +43,17 @@ public final class BehavioralProbeUtils {
         if (haystack == null || needle == null) return false;
         return haystack.toLowerCase().contains(needle.toLowerCase());
     }
+
+    /**
+     * Returns true when the response signals a duplicate-resource rejection (e.g. HAPI-2840).
+     * These errors must be treated as INCONCLUSIVE, not SECURE, because the server rejected the
+     * request before it could evaluate the malicious payload.
+     */
+    public static boolean isDuplicateResourceError(String body) {
+        if (body == null || body.isBlank()) return false;
+        String lower = body.toLowerCase();
+        return lower.contains("hapi-2840")
+                || lower.contains("can not create resource duplicating existing resource")
+                || lower.contains("duplicate");
+    }
 }

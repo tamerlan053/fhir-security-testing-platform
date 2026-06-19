@@ -41,6 +41,8 @@ public class EncodedHiddenDataAttack implements ExecutableAttack {
 
         String payload = "{"
                 + "\"resourceType\":\"Patient\","
+                + "\"name\":[{\"family\":\"TagProbe-" + marker + "\"}],"
+                + "\"identifier\":[{\"system\":\"urn:probe\",\"value\":\"" + marker + "\"}],"
                 + "\"meta\":{\"tag\":[{\"code\":\"x\",\"display\":\"" + escaped + "\"}]}"
                 + "}";
 
@@ -48,14 +50,22 @@ public class EncodedHiddenDataAttack implements ExecutableAttack {
         int code = httpResult.statusCode();
         String body = httpResult.responseBody();
 
+        if (BehavioralProbeUtils.isDuplicateResourceError(body)) {
+            return AttackOutcome.duplicateResourceInconclusive(code, body, "encoded hidden data probe");
+        }
         if (code == 401 || code == 403) {
-            return AttackOutcome.secure(code, body, "Write rejected without authorization.");
+            return AttackOutcome.secure(code, body,
+                    "Encoded hidden data: write rejected without authorization. "
+                            + "Validation reached: NO. Rejection reason: authentication.");
         }
         if (code == 400 || code == 404 || code == 405 || code == 412 || code == 422) {
-            return AttackOutcome.secure(code, body, "Server rejected the payload (no encoded marker persistence).");
+            return AttackOutcome.secure(code, body,
+                    "Encoded hidden data: server rejected the payload (no encoded marker persistence). "
+                            + "Validation reached: YES. Rejection reason: payload validation.");
         }
         if (code == 500) {
-            return AttackOutcome.inconclusive(code, body, "Server error during meta.tag marker probe.");
+            return AttackOutcome.inconclusive(code, body,
+                    "Encoded hidden data: server error. Validation reached: UNKNOWN.");
         }
 
         if (code == 200 || code == 201) {
@@ -84,7 +94,8 @@ public class EncodedHiddenDataAttack implements ExecutableAttack {
                 return AttackOutcome.inconclusive(
                         code,
                         combined,
-                        "POST succeeded but follow-up GET requires authorization; cannot confirm whether meta.tag marker persisted."
+                        "Encoded hidden data: POST succeeded but follow-up GET requires authorization; cannot confirm persistence. "
+                                + "Validation reached: YES. Rejection reason: authorization on read."
                 );
             }
 
@@ -92,7 +103,8 @@ public class EncodedHiddenDataAttack implements ExecutableAttack {
                 return AttackOutcome.vulnerable(
                         code,
                         combined,
-                        "Meta.tag display marker persisted and is retrievable (potential encoded covert storage channel).",
+                        "Encoded hidden data: meta.tag display marker persisted and is retrievable (potential encoded covert storage channel). "
+                                + "Validation reached: YES. Rejection reason: none (payload accepted).",
                         AttackSeverity.LOW
                 );
             }
@@ -100,10 +112,12 @@ public class EncodedHiddenDataAttack implements ExecutableAttack {
             return AttackOutcome.secure(
                     code,
                     combined,
-                    "Meta.tag marker was not present on follow-up GET (server likely normalized/stripped it)."
+                    "Encoded hidden data: meta.tag marker was not present on follow-up GET (server likely normalized/stripped it). "
+                            + "Validation reached: YES. Rejection reason: sanitization."
             );
         }
 
-        return AttackOutcome.inconclusive(code, body, "Unexpected status on meta.tag marker probe: " + code);
+        return AttackOutcome.inconclusive(code, body,
+                "Encoded hidden data: unexpected status: " + code + ". Validation reached: UNKNOWN.");
     }
 }
